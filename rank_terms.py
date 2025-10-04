@@ -583,8 +583,8 @@ if __name__ == "__main__":
     import sys
 
     # API keys - update these or set as environment variables
-    anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "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")
-    openai_key = os.environ.get("OPENAI_API_KEY", "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")
+    anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "placeholder")
+    openai_key = os.environ.get("OPENAI_API_KEY", "placeholder")
 
     print(f"Note: The hardcoded Anthropic API key appears to be invalid.")
     print(f"Please update the key in the code or set ANTHROPIC_API_KEY environment variable.")
