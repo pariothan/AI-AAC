@@ -32,9 +32,13 @@
             font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
             background: linear-gradient(180deg, #e8efff 0%, #f9fbff 100%);
             color: var(--text-strong);
-            min-height: 100vh;
-            overflow-y: auto;
-            padding: 40px 0;
+            height: 100vh;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: stretch;
+            padding: 24px;
+            overflow: hidden;
         }
 
         h1, h2, h3 {
@@ -47,8 +51,10 @@
 
         .app-shell {
             max-width: 1280px;
-            margin: 0 auto;
-            padding: 0 32px 48px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
         }
 
         .container {
@@ -59,7 +65,8 @@
             display: flex;
             gap: 28px;
             align-items: stretch;
-            min-height: 520px;
+            min-height: 0;
+            height: 100%;
             box-shadow: var(--shadow-lg);
         }
 
@@ -75,6 +82,9 @@
             border: 1px solid var(--border);
             box-shadow: var(--shadow-sm);
             transition: flex-basis 0.3s ease;
+            height: 100%;
+            min-height: 0;
+            overflow: hidden;
         }
 
         .sidebar.focused {
@@ -85,6 +95,7 @@
             display: flex;
             flex-direction: column;
             gap: 18px;
+            flex-shrink: 0;
         }
 
         .logo {
@@ -134,6 +145,7 @@
         .search-box {
             padding-top: 12px;
             border-top: 1px dashed rgba(84, 101, 255, 0.16);
+            flex-shrink: 0;
         }
 
         .search-box input[type="text"] {
@@ -202,6 +214,7 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
+            min-height: 0;
         }
 
         .word-bank::-webkit-scrollbar,
@@ -325,6 +338,7 @@
             font-size: 13px;
             color: var(--text-muted);
             text-align: center;
+            flex-shrink: 0;
         }
 
         /* Main Canvas Area */
@@ -333,6 +347,7 @@
             display: flex;
             gap: 24px;
             align-items: stretch;
+            min-height: 0;
         }
 
         .workspace-column {
@@ -346,6 +361,8 @@
             flex-direction: column;
             gap: 18px;
             position: relative;
+            min-height: 0;
+            overflow: hidden;
         }
 
         .workspace-heading {
@@ -361,7 +378,7 @@
 
         .workspace {
             flex: 1;
-            min-height: 320px;
+            min-height: 0;
             display: flex;
             flex-wrap: wrap;
             gap: 12px;
@@ -371,7 +388,7 @@
             border-radius: var(--radius-md);
             border: 2px dashed rgba(84, 101, 255, 0.18);
             position: relative;
-            overflow-y: auto;
+            overflow: hidden;
             box-shadow: inset 0 1px 4px rgba(84, 101, 255, 0.08);
         }
 
@@ -475,6 +492,9 @@
             border: 1px solid var(--border);
             box-shadow: var(--shadow-sm);
             transition: flex-basis 0.3s ease;
+            height: 100%;
+            min-height: 0;
+            overflow: hidden;
         }
 
         .sentences-panel.focused {
@@ -485,6 +505,7 @@
             display: flex;
             flex-direction: column;
             gap: 18px;
+            flex-shrink: 0;
         }
 
         .sentences-header {
@@ -504,6 +525,7 @@
             display: flex;
             flex-direction: column;
             gap: 10px;
+            min-height: 0;
         }
 
         .sentence-item {
@@ -584,12 +606,25 @@
         }
 
         @media (max-width: 1200px) {
+            body {
+                height: auto;
+                min-height: 100vh;
+                overflow-y: auto;
+                padding: 16px;
+            }
+
+            .app-shell {
+                height: auto;
+            }
+
             .container {
                 flex-direction: column;
+                height: auto;
             }
 
             .canvas-area {
                 flex-direction: column;
+                min-height: auto;
             }
 
             .sidebar,
@@ -598,10 +633,12 @@
             .sentences-panel.focused {
                 flex: 1 1 auto;
                 width: 100%;
+                height: auto;
             }
 
             .workspace-column {
                 order: 2;
+                height: auto;
             }
 
             .sentences-panel {
@@ -611,11 +648,7 @@
 
         @media (max-width: 768px) {
             body {
-                padding: 24px 0;
-            }
-
-            .app-shell {
-                padding: 0 16px 32px;
+                padding: 12px;
             }
 
             .container {
@@ -623,7 +656,6 @@
             }
 
             .workspace {
-                min-height: 260px;
                 padding: 20px;
             }
         }
