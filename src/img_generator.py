@@ -4,10 +4,12 @@ import anthropic
 import os
 from dotenv import load_dotenv
 import base64
-from typing import Dict
+from typing import Dict, List, Optional
 from PIL import Image
 import pillow_heif
 from io import BytesIO
+from pydantic import BaseModel
+from vocab_generator import generate_vocabulary
 
 # Load environment variables from the src directory
 load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
@@ -16,6 +18,12 @@ load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
 pillow_heif.register_heif_opener()
 
 app = FastAPI()
+
+
+# Pydantic models for request validation
+class VocabularyRequest(BaseModel):
+    context: str
+    num_words: Optional[int] = 100
 
 def get_image_description(image_bytes: bytes, mime_type: str) -> Dict[str, str]:
     """
@@ -33,6 +41,9 @@ def get_image_description(image_bytes: bytes, mime_type: str) -> Dict[str, str]:
 
     if not api_key:
         raise ValueError("No API key found. Please set ANTHROPIC_API_KEY or IMG_GENERATOR_ANTHRPIC_API_KEY in .env file")
+
+    # Remove quotes if present (dotenv should handle this, but just in case)
+    api_key = api_key.strip('"').strip("'")
 
     # Initialize the Anthropic client
     client = anthropic.Anthropic(api_key=api_key)
@@ -232,6 +243,84 @@ async def describe_image(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=f"Error processing image: {str(e)}")
 
 
+@app.post("/generate-vocabulary")
+async def generate_vocab_from_text(request: VocabularyRequest):
+    """
+    Generate vocabulary words from a given text context.
+
+    Args:
+        request: VocabularyRequest with 'context' and optional 'num_words'
+
+    Returns:
+        JSON response with vocabulary list
+    """
+    try:
+        # Generate vocabulary
+        vocab_list = generate_vocabulary(request.context, request.num_words)
+
+        return JSONResponse(content={
+            "success": True,
+            "vocabulary": vocab_list,
+            "count": len(vocab_list)
+        })
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating vocabulary: {str(e)}")
+
+
+@app.post("/analyze-image-with-vocab")
+async def analyze_image_with_vocab(file: UploadFile = File(...), num_words: int = 100):
+    """
+    End-to-end endpoint: Upload image, generate description, then generate vocabulary.
+
+    Args:
+        file: The uploaded image file
+        num_words: Number of vocabulary words to generate (default: 100)
+
+    Returns:
+        JSON response with image description and vocabulary list
+    """
+    # All supported formats including HEIC
+    allowed_types = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif", "image/heic", "image/heif"]
+
+    if file.content_type not in allowed_types:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid file type. Allowed types: JPEG, PNG, WebP, GIF, HEIC"
+        )
+
+    try:
+        # Step 1: Process the image
+        image_bytes = await file.read()
+        mime_type = file.content_type
+
+        # Convert HEIC to JPEG if needed
+        if mime_type in ["image/heic", "image/heif"]:
+            image_bytes, mime_type = convert_heic_to_jpeg(image_bytes)
+
+        # Resize image if it's too large
+        image_bytes, mime_type = resize_image_if_needed(image_bytes, mime_type)
+
+        # Step 2: Generate description
+        description_result = get_image_description(image_bytes, mime_type)
+        description = description_result["description"]
+
+        # Step 3: Generate vocabulary from description
+        vocab_list = generate_vocabulary(description, num_words)
+
+        return JSONResponse(content={
+            "success": True,
+            "filename": file.filename,
+            "description": description,
+            "vocabulary": vocab_list,
+            "vocab_count": len(vocab_list),
+            "model": description_result["model"]
+        })
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error in end-to-end processing: {str(e)}")
+
+
 @app.get("/")
 async def root():
     """UI endpoint for image upload"""
@@ -348,6 +437,36 @@ async def root():
                 line-height: 1.6;
                 white-space: pre-wrap;
             }
+            #vocabulary {
+                margin-top: 20px;
+                padding: 20px;
+                background: #fff8f0;
+                border-radius: 10px;
+                display: none;
+            }
+            #vocabulary h2 {
+                color: #f59e0b;
+                margin-bottom: 15px;
+            }
+            #vocabList {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+                gap: 10px;
+                margin-top: 15px;
+            }
+            .vocab-word {
+                background: white;
+                padding: 8px 12px;
+                border-radius: 8px;
+                text-align: center;
+                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+                font-weight: 500;
+                color: #333;
+            }
+            .btn-secondary {
+                background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+                margin-left: 10px;
+            }
             .loading {
                 display: none;
                 text-align: center;
@@ -404,11 +523,21 @@ async def root():
             <div id="result">
                 <h2>📝 Description</h2>
                 <div id="description"></div>
+                <button class="btn btn-secondary" id="generateVocabBtn" onclick="generateVocabulary()" style="margin-top: 20px; display: none;">
+                    🎓 Generate Vocabulary
+                </button>
+            </div>
+
+            <div id="vocabulary">
+                <h2>📚 Vocabulary Words</h2>
+                <p style="color: #666; margin-bottom: 10px;">Key terms and concepts from the image:</p>
+                <div id="vocabList"></div>
             </div>
         </div>
 
         <script>
             let selectedFile = null;
+            let currentDescription = null;
 
             const uploadArea = document.getElementById('uploadArea');
             const fileInput = document.getElementById('fileInput');
@@ -417,6 +546,9 @@ async def root():
             const loading = document.getElementById('loading');
             const result = document.getElementById('result');
             const analyzeBtn = document.getElementById('analyzeBtn');
+            const generateVocabBtn = document.getElementById('generateVocabBtn');
+            const vocabulary = document.getElementById('vocabulary');
+            const vocabList = document.getElementById('vocabList');
 
             // Prevent default drag behaviors
             ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
@@ -489,8 +621,11 @@ async def root():
                     const data = await response.json();
 
                     if (data.success) {
+                        currentDescription = data.description;
                         document.getElementById('description').textContent = data.description;
                         result.style.display = 'block';
+                        generateVocabBtn.style.display = 'inline-block';
+                        vocabulary.style.display = 'none'; // Hide vocab until button is clicked
                     } else {
                         alert('Error: ' + (data.detail || 'Failed to analyze image'));
                     }
@@ -499,6 +634,52 @@ async def root():
                 } finally {
                     loading.style.display = 'none';
                     analyzeBtn.disabled = false;
+                }
+            }
+
+            async function generateVocabulary() {
+                if (!currentDescription) return;
+
+                // Show loading
+                loading.style.display = 'block';
+                generateVocabBtn.disabled = true;
+                vocabulary.style.display = 'none';
+
+                try {
+                    const response = await fetch('/generate-vocabulary', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            context: currentDescription,
+                            num_words: 100
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        // Clear previous vocabulary
+                        vocabList.innerHTML = '';
+
+                        // Display vocabulary words
+                        data.vocabulary.forEach(word => {
+                            const wordDiv = document.createElement('div');
+                            wordDiv.className = 'vocab-word';
+                            wordDiv.textContent = word;
+                            vocabList.appendChild(wordDiv);
+                        });
+
+                        vocabulary.style.display = 'block';
+                    } else {
+                        alert('Error: ' + (data.detail || 'Failed to generate vocabulary'));
+                    }
+                } catch (error) {
+                    alert('Error: ' + error.message);
+                } finally {
+                    loading.style.display = 'none';
+                    generateVocabBtn.disabled = false;
                 }
             }
         </script>

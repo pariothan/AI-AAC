@@ -4,6 +4,9 @@ from typing import List
 from dotenv import load_dotenv
 import os
 
+# Load environment variables from the src directory
+load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
+
 #this is an importable file that will take a string "context" and return a list of ~100 vocabulary words
 def generate_vocabulary(context: str, num_words: int = 100) -> List[str]:
     """
@@ -16,10 +19,17 @@ def generate_vocabulary(context: str, num_words: int = 100) -> List[str]:
     Returns:
         A list of relevant vocabulary words
     """
+    # Get API key - try IMG_GENERATOR specific key first, then fall back to general key
+    api_key = os.getenv("IMG_GENERATOR_ANTHRPIC_API_KEY")
+
+    if not api_key:
+        raise ValueError("No API key found. Please set ANTHROPIC_API_KEY or IMG_GENERATOR_ANTHRPIC_API_KEY in .env file")
+
+    # Remove quotes if present (dotenv should handle this, but just in case)
+    api_key = api_key.strip('"').strip("'")
+
     # Initialize the Anthropic client
-    client = anthropic.Anthropic(
-        api_key=os.getenv("ANTHROPIC_API_KEY")
-    )
+    client = anthropic.Anthropic(api_key=api_key)
 
     # Create the prompt for Claude
     prompt = f"""Given the following context, generate a list of exactly {num_words} most relevant vocabulary words.

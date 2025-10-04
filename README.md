@@ -2,6 +2,9 @@
 
 A FastAPI web application that generates detailed descriptions of images using Claude's vision capabilities.
 
+
+Slides link: https://docs.google.com/presentation/d/1YGiIkGLCvR31djQOlJv5BNP7Qfjj2e1R3gXzgQje9W4/edit?usp=sharing
+
 ## Features
 
 - 🖼️ **Image Upload UI**: Drag-and-drop or browse to upload images
