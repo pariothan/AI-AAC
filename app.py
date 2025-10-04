@@ -4,13 +4,20 @@ import anthropic
 import os
 from openai import OpenAI
 from rank_terms import generate_terms
+import base64
+from PIL import Image
+import io
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
 
-# API keys from rank_terms.py
-ANTHROPIC_KEY = os.environ.get("ANTHROPIC_API_KEY", "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")
-OPENAI_KEY = os.environ.get("OPENAI_API_KEY", "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")
+# API keys from .env file
+ANTHROPIC_KEY = os.getenv("ANTHROPIC_API_KEY")
+OPENAI_KEY = os.getenv("OPENAI_API_KEY")
 
 # Initialize clients
 anthropic_client = anthropic.Anthropic(api_key=ANTHROPIC_KEY)
@@ -148,5 +155,95 @@ Return ONLY the sentences, one per line. No numbering, no extra text."""
             'error': str(e)
         }), 500
 
+@app.route('/analyze-image', methods=['POST'])
+def analyze_image():
+    try:
+        if 'image' not in request.files:
+            return jsonify({'error': 'No image file provided'}), 400
+
+        file = request.files['image']
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+
+        # Read and process the image
+        image_bytes = file.read()
+
+        # Resize if needed (max 5MB, max dimension 1568px)
+        image = Image.open(io.BytesIO(image_bytes))
+
+        # Convert RGBA to RGB if needed
+        if image.mode in ('RGBA', 'LA', 'P'):
+            background = Image.new('RGB', image.size, (255, 255, 255))
+            if image.mode == 'P':
+                image = image.convert('RGBA')
+            background.paste(image, mask=image.split()[-1] if image.mode in ('RGBA', 'LA') else None)
+            image = background
+        elif image.mode != 'RGB':
+            image = image.convert('RGB')
+
+        # Resize if too large
+        max_dimension = 1568
+        if max(image.size) > max_dimension:
+            ratio = max_dimension / max(image.size)
+            new_size = tuple(int(dim * ratio) for dim in image.size)
+            image = image.resize(new_size, Image.Resampling.LANCZOS)
+
+        # Convert back to bytes
+        img_byte_arr = io.BytesIO()
+        image.save(img_byte_arr, format='JPEG', quality=85)
+        img_byte_arr.seek(0)
+        image_bytes = img_byte_arr.read()
+
+        # Encode to base64
+        image_base64 = base64.standard_b64encode(image_bytes).decode("utf-8")
+
+        # Generate description using Claude's vision
+        prompt = """Describe this image in a way that would help generate vocabulary words for someone learning to communicate.
+Focus on:
+- Main objects and subjects
+- Actions taking place
+- Setting and environment
+- Important details
+- Overall context
+
+Provide a clear, concise description (2-3 sentences)."""
+
+        message = anthropic_client.messages.create(
+            model="claude-sonnet-4-5-20250929",
+            max_tokens=1024,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": "image/jpeg",
+                                "data": image_base64,
+                            },
+                        },
+                        {
+                            "type": "text",
+                            "text": prompt
+                        }
+                    ],
+                }
+            ],
+        )
+
+        description = message.content[0].text.strip()
+
+        return jsonify({
+            'success': True,
+            'description': description
+        })
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=5001)

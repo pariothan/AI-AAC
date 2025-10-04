@@ -9,8 +9,8 @@ from PIL import Image
 import pillow_heif
 from io import BytesIO
 
-# Load environment variables from the src directory
-load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
+# Load environment variables from the parent directory
+load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
 
 # Register HEIF opener with Pillow
 pillow_heif.register_heif_opener()

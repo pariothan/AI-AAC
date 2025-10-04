@@ -16,6 +16,10 @@ from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.cluster import KMeans
 import re
 from openai import OpenAI
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Try to load spaCy model
 try:
@@ -491,10 +495,10 @@ def generate_terms(context: str, n: int = 100,
     print(f"{'='*70}\n")
 
     if anthropic_client is None:
-        anthropic_client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+        anthropic_client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
     if openai_client is None:
-        openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+        openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
     # 1. Embed context
     print("1. Embedding context with OpenAI...")
@@ -582,13 +586,14 @@ def print_results(result: dict):
 if __name__ == "__main__":
     import sys
 
-    # API keys - update these or set as environment variables
-    anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "placeholder")
-    openai_key = os.environ.get("OPENAI_API_KEY", "placeholder")
+    # API keys from .env file
+    anthropic_key = os.getenv("ANTHROPIC_API_KEY")
+    openai_key = os.getenv("OPENAI_API_KEY")
 
-    print(f"Note: The hardcoded Anthropic API key appears to be invalid.")
-    print(f"Please update the key in the code or set ANTHROPIC_API_KEY environment variable.")
-    print(f"Get your key from: https://console.anthropic.com/\n")
+    if not anthropic_key or not openai_key:
+        print("ERROR: API keys not found in .env file")
+        print("Please create a .env file with ANTHROPIC_API_KEY and OPENAI_API_KEY")
+        sys.exit(1)
 
     # Get context from command line or prompt
     if len(sys.argv) > 1:

@@ -679,6 +679,8 @@
                             placeholder="Enter context"
                         />
                         <button class="btn btn-primary" id="generateBtn">Generate Words</button>
+                        <input type="file" id="imageInput" accept="image/*" style="display: none;">
+                        <button class="btn btn-primary" id="attachImageBtn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">📷 Attach Image</button>
                     </div>
                 </div>
 
@@ -768,6 +770,8 @@
         const loading = document.getElementById('loading');
         const searchInput = document.getElementById('searchInput');
         const termCount = document.getElementById('termCount');
+        const imageInput = document.getElementById('imageInput');
+        const attachImageBtn = document.getElementById('attachImageBtn');
 
         // Initialize with default categories
         displayWordBank();
@@ -775,6 +779,47 @@
         generateBtn.addEventListener('click', generateTerms);
         contextInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') generateTerms();
+        });
+
+        // Image upload handling
+        attachImageBtn.addEventListener('click', () => {
+            imageInput.click();
+        });
+
+        imageInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            loading.classList.add('show');
+            document.querySelector('.loading-text').textContent = 'Analyzing image...';
+            attachImageBtn.disabled = true;
+
+            try {
+                const formData = new FormData();
+                formData.append('image', file);
+
+                const response = await fetch('/analyze-image', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Set the description as context and auto-generate
+                    contextInput.value = data.description;
+                    await generateTerms();
+                } else {
+                    alert('Error analyzing image: ' + data.error);
+                }
+            } catch (error) {
+                alert('Error analyzing image: ' + error.message);
+            } finally {
+                loading.classList.remove('show');
+                document.querySelector('.loading-text').textContent = 'Generating words...';
+                attachImageBtn.disabled = false;
+                imageInput.value = ''; // Reset file input
+            }
         });
 
         async function generateTerms() {
