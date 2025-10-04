@@ -1,3 +1,4 @@
+
 #Basic Usage
 import pyttsx3
 
@@ -17,7 +18,7 @@ engine.setProperty('volume', 1.0)
 
 # Set voice
 voices = engine.getProperty('voices')
-engine.setProperty('voice', voices[1].id) # 0 for male, 1 for female
+engine.setProperty('voice', voices[0].id) # 0 for male, 1 for female
 
 engine.say("Hello World!")
 engine.runAndWait()
@@ -25,3 +26,4 @@ engine.runAndWait()
 # Saving Speech to a File
 engine.save_to_file('Hello World', 'test.mp3')
 engine.runAndWait()
+
