@@ -1,6 +1,8 @@
 import anthropic
 import os
 from typing import List
+from dotenv import load_dotenv
+import os
 
 #this is an importable file that will take a string "context" and return a list of ~100 vocabulary words
 def generate_vocabulary(context: str, num_words: int = 100) -> List[str]:
@@ -16,7 +18,7 @@ def generate_vocabulary(context: str, num_words: int = 100) -> List[str]:
     """
     # Initialize the Anthropic client
     client = anthropic.Anthropic(
-        api_key="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"
+        api_key=os.getenv("ANTHROPIC_API_KEY")
     )
 
     # Create the prompt for Claude
