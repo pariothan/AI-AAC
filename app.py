@@ -185,21 +185,26 @@ def generate_sentences():
         prompt = f"""Create 15-20 different short, simple sentences using ONLY these words: {words_str}
 
 CRITICAL RULES:
-- Use ONLY the words provided - DO NOT add any other content words
-- You may ONLY add function words (the, a, an, is, are, was, were, to, at, in, on, etc.)
+- Use ONLY the words provided - preserve the user's exact words and intended meaning
+- KEEP THE INTENDED CONTENT AS INTACT AS POSSIBLE - the user chose these specific words for a reason
+- You may ONLY add function words (the, a, an, is, are, was, were, to, at, in, on, with, while, etc.)
+- You may use clear synonyms for function words if they clarify meaning (during→while, have→possess)
 - You may conjugate verbs as necessary (add -s, -ed, -ing)
 - You may add plural markers (-s, -es)
 - You may change pronoun case (I/me, he/him, she/her, they/them, etc.)
-- You may REORDER the words to create different sentence structures
+- You may add helping verbs for clarity (want→want to have, need→need to get)
+- Keep words in their original order whenever possible - only reorder when absolutely necessary for grammar
+- DO NOT substitute the user's content words - only enhance with function words and grammatical elements
 - Make the sentences grammatically correct and natural
 - Be simple and clear
-- Vary the sentence structures - use different word orders
-- Show different ways to express ideas with the given words
-- Create variety: statements, questions, different perspectives
+- Preserve the original word sequence and intended meaning as much as possible
+- Show different ways to express ideas while maintaining the core words and meaning
+- Create variety through: adding function words, changing verb tenses, statements vs questions, different perspectives
 
-Examples of flexibility:
-- "I want go" → "I want to go" / "Do I want to go?" / "I go, I want"
-- "I feel happy" → "I feel happy" / "I am happy" / "Happy is how I feel"
+Examples of acceptable flexibility:
+- "I want go" → "I want to go" / "Do I want to go?" / "I wanted to go"
+- "I want food during learn new" → "I want to have food while learning new things" / "I want food during learning new things"
+- "I feel happy" → "I feel happy" / "I am feeling happy" / "Do I feel happy?"
 
 Return ONLY the sentences, one per line. No numbering, no extra text."""
 
