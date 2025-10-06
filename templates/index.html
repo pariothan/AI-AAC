@@ -355,6 +355,17 @@
             min-height: 0;
         }
 
+        .workspace-suggestions-wrapper {
+            flex: 1 1 0;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            min-height: 0;
+            min-width: 0;
+            max-width: 100%;
+            width: 0;
+        }
+
         .workspace-column {
             flex: 1;
             background: var(--surface-muted);
@@ -367,6 +378,7 @@
             gap: 18px;
             position: relative;
             min-height: 0;
+            min-width: 0;
             overflow: hidden;
         }
 
@@ -393,7 +405,8 @@
             border-radius: var(--radius-md);
             border: 2px dashed rgba(84, 101, 255, 0.18);
             position: relative;
-            overflow: hidden;
+            overflow-y: auto;
+            overflow-x: hidden;
             box-shadow: inset 0 1px 4px rgba(84, 101, 255, 0.08);
         }
 
@@ -409,7 +422,7 @@
             padding: 10px 16px;
             border-radius: 18px;
             box-shadow: 0 12px 20px rgba(84, 101, 255, 0.18);
-            cursor: grab;
+            cursor: pointer;
             user-select: none;
             font-size: 16px;
             font-weight: 600;
@@ -423,6 +436,18 @@
             transform: translateY(-2px);
             background: #dde1ff;
             box-shadow: 0 18px 28px rgba(84, 101, 255, 0.24);
+        }
+
+        .canvas-term:hover::before {
+            content: '🔊';
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            font-size: 16px;
+            background: white;
+            border-radius: 50%;
+            padding: 4px;
+            box-shadow: 0 4px 12px rgba(84, 101, 255, 0.3);
         }
 
         .canvas-term:active {
@@ -485,6 +510,108 @@
             font-size: 42px;
         }
 
+        /* Suggestions Panel */
+        .suggestions-panel {
+            background: var(--surface-muted);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            border-radius: var(--radius-md);
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+            flex-shrink: 0;
+            height: 100px;
+            min-height: 100px;
+            max-height: 100px;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .suggestions-header {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-strong);
+            flex-shrink: 0;
+            line-height: 1.2;
+        }
+
+        .suggestions-list {
+            flex: 1;
+            overflow-x: auto;
+            overflow-y: hidden;
+            display: flex;
+            flex-direction: row;
+            flex-wrap: nowrap;
+            gap: 8px;
+            min-height: 0;
+            padding-bottom: 4px;
+            align-items: flex-start;
+            width: 100%;
+        }
+
+        .suggestions-list::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .suggestions-list::-webkit-scrollbar-thumb {
+            background: rgba(84, 101, 255, 0.2);
+            border-radius: 20px;
+        }
+
+        .suggestions-list::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .suggestion-item {
+            padding: 6px 12px;
+            background: var(--surface-strong);
+            border-radius: var(--radius-sm);
+            box-shadow: 0 4px 12px rgba(84, 101, 255, 0.12);
+            font-size: 13px;
+            color: var(--text-strong);
+            border: 1px solid rgba(84, 101, 255, 0.18);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border 0.2s ease, background 0.2s ease, opacity 0.2s ease;
+            cursor: grab;
+            font-weight: 500;
+            white-space: nowrap;
+            flex-shrink: 0;
+            height: fit-content;
+            user-select: none;
+        }
+
+        .suggestion-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px rgba(84, 101, 255, 0.2);
+            border-color: rgba(84, 101, 255, 0.35);
+            background: #f8f9ff;
+        }
+
+        .suggestion-item:active {
+            cursor: grabbing;
+        }
+
+        .suggestions-empty {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 12px;
+            padding: 10px 12px;
+            background: rgba(84, 101, 255, 0.06);
+            border-radius: var(--radius-sm);
+            border: 1px dashed rgba(84, 101, 255, 0.2);
+            line-height: 1.4;
+            white-space: nowrap;
+        }
+
+        .suggestions-loading {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 12px;
+            padding: 10px 12px;
+            font-style: italic;
+            white-space: nowrap;
+        }
+
         /* Sentences Panel */
         .sentences-panel {
             flex: 0 0 320px;
@@ -534,6 +661,7 @@
         }
 
         .sentence-item {
+            position: relative;
             padding: 12px 16px;
             background: var(--surface-strong);
             border-radius: var(--radius-sm);
@@ -550,6 +678,16 @@
             transform: translateY(-2px);
             box-shadow: 0 18px 30px rgba(84, 101, 255, 0.22);
             border-color: rgba(84, 101, 255, 0.35);
+        }
+
+        .sentence-item:hover::after {
+            content: '🔊';
+            position: absolute;
+            top: 50%;
+            right: 12px;
+            transform: translateY(-50%);
+            font-size: 18px;
+            opacity: 0.7;
         }
 
         .sentences-empty {
@@ -668,8 +806,8 @@
     </style>
 </head>
 <body>
-    <!-- API Key Modal -->
-    <div id="apiKeyModal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.7); display: flex; align-items: center; justify-content: center; z-index: 2000;">
+    <!-- Setup Modal (API Key + Voice) -->
+    <div id="setupModal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.7); display: flex; align-items: center; justify-content: center; z-index: 2000;">
         <div style="background: var(--surface); border-radius: var(--radius-md); padding: 32px; max-width: 500px; width: 90%; border: 1px solid var(--border); box-shadow: var(--shadow-lg);">
             <h2 style="margin-bottom: 16px; font-size: 24px;">Welcome! 🔑</h2>
 
@@ -684,7 +822,7 @@
             </div>
 
             <p style="margin-bottom: 16px; color: var(--text-muted); line-height: 1.6; font-size: 14px;">
-                To use this app, please enter your OpenAI API key.
+                To use this app, please enter your OpenAI API key and select a voice.
             </p>
 
             <!-- Security notice -->
@@ -710,12 +848,41 @@
                 <span>Session only (clear key when browser closes)</span>
             </label>
 
+            <!-- Voice Selection -->
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; margin-bottom: 8px; font-size: 14px; font-weight: 600; color: var(--text-strong);">
+                    🔊 Select Voice:
+                </label>
+                <select id="voiceSelectModal" style="width: 100%; padding: 12px 16px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface-strong); font-size: 15px; cursor: pointer;">
+                    <option value="">Loading voices...</option>
+                </select>
+                <button id="testVoiceBtn" class="btn" style="margin-top: 8px; width: 100%; background: #f0f4ff; color: var(--primary); border: 1px solid var(--border);">🔊 Test Voice</button>
+            </div>
+
             <div style="display: flex; gap: 12px;">
-                <button id="saveApiKeyBtn" class="btn btn-primary" style="flex: 1;">Save & Continue</button>
+                <button id="saveSetupBtn" class="btn btn-primary" style="flex: 1;">Save & Continue</button>
             </div>
             <p style="margin-top: 16px; font-size: 13px; color: var(--text-muted);">
                 Don't have an API key? <a href="https://platform.openai.com/api-keys" target="_blank" style="color: var(--primary); text-decoration: underline;">Get one from OpenAI</a>
             </p>
+        </div>
+    </div>
+
+    <!-- Voice Selection Modal -->
+    <div id="voiceModal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.7); display: none; align-items: center; justify-content: center; z-index: 2000;">
+        <div style="background: var(--surface); border-radius: var(--radius-md); padding: 32px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; border: 1px solid var(--border); box-shadow: var(--shadow-lg);">
+            <h2 style="margin-bottom: 16px; font-size: 24px;">🔊 Select Voice</h2>
+            <p style="margin-bottom: 16px; color: var(--text-muted); font-size: 14px;">
+                Choose a voice for text-to-speech. Click "Test" to hear a sample.
+            </p>
+
+            <div id="voiceList" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px;">
+                <!-- Voice items will be populated here -->
+            </div>
+
+            <div style="display: flex; gap: 12px;">
+                <button id="closeVoiceModalBtn" class="btn" style="flex: 1; background: #f0f4ff; color: var(--primary); border: 1px solid var(--border);">Cancel</button>
+            </div>
         </div>
     </div>
 
@@ -727,19 +894,14 @@
                     <div class="logo">
                         <span>Word Bank</span>
                         <div style="display: flex; gap: 8px;">
+                            <input type="file" id="imageInput" accept="image/*" style="display: none;">
+                            <button class="focus-btn" id="attachImageBtn" title="Attach Image" style="font-size: 18px;">📷</button>
                             <button class="focus-btn" id="changeApiKeyBtn" title="Change API Key" style="font-size: 14px;">🔑</button>
                             <button class="focus-btn" id="focusWordsBtn">⇄</button>
                         </div>
                     </div>
                     <div class="input-container">
-                        <input
-                            type="text"
-                            id="contextInput"
-                            placeholder="Enter context"
-                        />
-                        <button class="btn btn-primary" id="generateBtn">Generate Words</button>
-                        <input type="file" id="imageInput" accept="image/*" style="display: none;">
-                        <button class="btn btn-primary" id="attachImageBtn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">📷 Attach Image</button>
+                        <button class="btn btn-primary" id="selectVoiceBtn" style="width: 100%;">🔊 Select Voice</button>
                     </div>
                 </div>
 
@@ -760,15 +922,28 @@
 
             <!-- Canvas Area -->
             <div class="canvas-area">
-                <div class="workspace-column">
-                    <div class="workspace-heading">
-                        <h2>Workspace</h2>
+                <div class="workspace-suggestions-wrapper">
+                    <div class="workspace-column">
+                        <div class="workspace-heading">
+                            <h2>Workspace</h2>
+                            <button class="btn btn-primary" id="speakAllBtn" style="padding: 8px 16px; font-size: 14px;">🔊 Speak All</button>
+                        </div>
+
+                        <div class="workspace" id="workspace">
+                            <div class="empty-state">
+                                <div class="empty-state-icon">💬</div>
+                                <div>Workspace empty</div>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="workspace" id="workspace">
-                        <div class="empty-state">
-                            <div class="empty-state-icon">💬</div>
-                            <div>Workspace empty</div>
+                    <!-- Suggestions Panel -->
+                    <div class="suggestions-panel" id="suggestionsPanel">
+                        <div class="suggestions-header">
+                            <span>💡 Suggested Next</span>
+                        </div>
+                        <div class="suggestions-list" id="suggestionsList">
+                            <div class="suggestions-empty">Add words to workspace to see suggestions</div>
                         </div>
                     </div>
                 </div>
@@ -808,23 +983,317 @@
         const BASE_PATH = normalizeBasePath(window.APP_CONFIG?.basePath);
         const buildUrl = (endpoint) => `${BASE_PATH}${endpoint}`;
 
-        // API Key Management
+        // Text-to-Speech functionality
+        let selectedVoice = null;
+        let availableVoices = [];
+
+        function populateVoiceModal() {
+            const voiceList = document.getElementById('voiceList');
+            if (!voiceList || availableVoices.length === 0) return;
+
+            // Clear existing items
+            voiceList.innerHTML = '';
+
+            // Get saved voice
+            const savedVoiceName = localStorage.getItem('tts_voice');
+
+            // Add default option
+            const defaultItem = createVoiceItem(null, 'Default Voice', 'System default', savedVoiceName === null || savedVoiceName === '');
+            voiceList.appendChild(defaultItem);
+
+            // Add voices, prioritizing English voices
+            const englishVoices = availableVoices.filter(v => v.lang.startsWith('en'));
+            const otherVoices = availableVoices.filter(v => !v.lang.startsWith('en'));
+
+            if (englishVoices.length > 0) {
+                const englishHeader = document.createElement('div');
+                englishHeader.style.cssText = 'font-size: 12px; font-weight: 700; color: var(--text-muted); margin-top: 12px; margin-bottom: 4px;';
+                englishHeader.textContent = 'English Voices';
+                voiceList.appendChild(englishHeader);
+
+                englishVoices.forEach(voice => {
+                    const item = createVoiceItem(voice, voice.name, voice.lang, savedVoiceName === voice.name);
+                    voiceList.appendChild(item);
+                });
+            }
+
+            if (otherVoices.length > 0) {
+                const otherHeader = document.createElement('div');
+                otherHeader.style.cssText = 'font-size: 12px; font-weight: 700; color: var(--text-muted); margin-top: 12px; margin-bottom: 4px;';
+                otherHeader.textContent = 'Other Languages';
+                voiceList.appendChild(otherHeader);
+
+                otherVoices.forEach(voice => {
+                    const item = createVoiceItem(voice, voice.name, voice.lang, savedVoiceName === voice.name);
+                    voiceList.appendChild(item);
+                });
+            }
+        }
+
+        function createVoiceItem(voice, name, lang, isSelected) {
+            const item = document.createElement('div');
+            item.style.cssText = `
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 12px;
+                background: ${isSelected ? '#f0f4ff' : 'var(--surface-strong)'};
+                border: 1px solid ${isSelected ? 'var(--primary)' : 'var(--border)'};
+                border-radius: var(--radius-sm);
+                cursor: pointer;
+                transition: all 0.2s ease;
+            `;
+
+            const info = document.createElement('div');
+            info.style.cssText = 'flex: 1;';
+            info.innerHTML = `
+                <div style="font-weight: 600; font-size: 14px; color: var(--text-strong);">${name}</div>
+                <div style="font-size: 12px; color: var(--text-muted);">${lang}</div>
+            `;
+
+            const testBtn = document.createElement('button');
+            testBtn.className = 'btn';
+            testBtn.style.cssText = 'padding: 6px 12px; font-size: 13px; background: #f0f4ff; color: var(--primary); border: 1px solid var(--border);';
+            testBtn.textContent = '🔊 Test';
+            testBtn.onclick = (e) => {
+                e.stopPropagation();
+                testVoice(voice);
+            };
+
+            const selectBtn = document.createElement('button');
+            selectBtn.className = 'btn btn-primary';
+            selectBtn.style.cssText = 'padding: 6px 16px; font-size: 13px;';
+            selectBtn.textContent = isSelected ? '✓ Selected' : 'Select';
+            if (isSelected) {
+                selectBtn.style.opacity = '0.7';
+            }
+
+            item.appendChild(info);
+            item.appendChild(testBtn);
+            item.appendChild(selectBtn);
+
+            // Click to select
+            item.onclick = () => {
+                selectVoice(voice);
+                document.getElementById('voiceModal').style.display = 'none';
+            };
+
+            return item;
+        }
+
+        function testVoice(voice) {
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance('Hello! This is how I sound.');
+            if (voice) {
+                utterance.voice = voice;
+            }
+            utterance.rate = 0.9;
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function selectVoice(voice) {
+            if (voice) {
+                selectedVoice = voice;
+                localStorage.setItem('tts_voice', voice.name);
+                updateVoiceButtonText(voice.name);
+            } else {
+                selectedVoice = null;
+                localStorage.removeItem('tts_voice');
+                updateVoiceButtonText('Default Voice');
+            }
+        }
+
+        function updateVoiceButtonText(voiceName) {
+            const btn = document.getElementById('selectVoiceBtn');
+            if (btn) {
+                btn.textContent = `🔊 ${voiceName}`;
+            }
+        }
+
+        function loadVoices() {
+            availableVoices = window.speechSynthesis.getVoices();
+
+            // Populate modal dropdown
+            const voiceSelectModal = document.getElementById('voiceSelectModal');
+
+            if (availableVoices.length > 0) {
+                if (voiceSelectModal) {
+                    populateVoiceSelect(voiceSelectModal);
+                }
+
+                // Load saved voice preference
+                const savedVoice = localStorage.getItem('tts_voice');
+                if (savedVoice) {
+                    selectedVoice = availableVoices.find(v => v.name === savedVoice);
+                    updateVoiceButtonText(savedVoice);
+                    if (voiceSelectModal) {
+                        voiceSelectModal.value = savedVoice;
+                    }
+                }
+            }
+        }
+
+        function populateVoiceSelect(selectElement) {
+            if (availableVoices.length === 0) return;
+
+            // Clear existing options
+            selectElement.innerHTML = '';
+
+            // Add default option
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = '🔊 Default Voice';
+            selectElement.appendChild(defaultOption);
+
+            // Add voices
+            const englishVoices = availableVoices.filter(v => v.lang.startsWith('en'));
+            const otherVoices = availableVoices.filter(v => !v.lang.startsWith('en'));
+
+            if (englishVoices.length > 0) {
+                const englishGroup = document.createElement('optgroup');
+                englishGroup.label = 'English';
+                englishVoices.forEach(voice => {
+                    const option = document.createElement('option');
+                    option.value = voice.name;
+                    option.textContent = `${voice.name} (${voice.lang})`;
+                    englishGroup.appendChild(option);
+                });
+                selectElement.appendChild(englishGroup);
+            }
+
+            if (otherVoices.length > 0) {
+                const otherGroup = document.createElement('optgroup');
+                otherGroup.label = 'Other Languages';
+                otherVoices.forEach(voice => {
+                    const option = document.createElement('option');
+                    option.value = voice.name;
+                    option.textContent = `${voice.name} (${voice.lang})`;
+                    otherGroup.appendChild(option);
+                });
+                selectElement.appendChild(otherGroup);
+            }
+        }
+
+        // Load voices when they're ready
+        if (speechSynthesis.onvoiceschanged !== undefined) {
+            speechSynthesis.onvoiceschanged = loadVoices;
+        }
+        loadVoices(); // Call immediately in case voices are already loaded
+
+        function removeAllEmojis(text) {
+            // Comprehensive emoji removal - covers all emoji ranges
+            return text.replace(/[\u{1F600}-\u{1F64F}]/gu, '') // Emoticons
+                       .replace(/[\u{1F300}-\u{1F5FF}]/gu, '') // Misc Symbols and Pictographs
+                       .replace(/[\u{1F680}-\u{1F6FF}]/gu, '') // Transport and Map
+                       .replace(/[\u{1F1E0}-\u{1F1FF}]/gu, '') // Flags
+                       .replace(/[\u{2600}-\u{26FF}]/gu, '')   // Misc symbols
+                       .replace(/[\u{2700}-\u{27BF}]/gu, '')   // Dingbats
+                       .replace(/[\u{1F900}-\u{1F9FF}]/gu, '') // Supplemental Symbols and Pictographs
+                       .replace(/[\u{1FA00}-\u{1FA6F}]/gu, '') // Chess Symbols
+                       .replace(/[\u{1FA70}-\u{1FAFF}]/gu, '') // Symbols and Pictographs Extended-A
+                       .replace(/[\u{2300}-\u{23FF}]/gu, '')   // Miscellaneous Technical
+                       .replace(/[\u{FE00}-\u{FE0F}]/gu, '')   // Variation Selectors
+                       .replace(/[\u{200D}]/gu, '')            // Zero Width Joiner
+                       .trim();
+        }
+
+        function speak(text) {
+            // Stop any ongoing speech
+            window.speechSynthesis.cancel();
+
+            // Remove emoji from text (keep only the word)
+            const cleanText = removeAllEmojis(text);
+
+            if (!cleanText) return;
+
+            const utterance = new SpeechSynthesisUtterance(cleanText);
+            utterance.rate = 0.9; // Slightly slower for clarity
+            utterance.pitch = 1.0;
+            utterance.volume = 1.0;
+
+            // Use selected voice if available
+            if (selectedVoice) {
+                utterance.voice = selectedVoice;
+            }
+
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function speakAll() {
+            // Stop any ongoing speech
+            window.speechSynthesis.cancel();
+
+            // Get all words from workspace in order
+            const workspace = document.getElementById('workspace');
+            const canvasTerms = Array.from(workspace.querySelectorAll('.canvas-term'))
+                .map(el => el.textContent.replace('×', '').trim());
+
+            if (canvasTerms.length === 0) {
+                alert('No words in workspace to speak!');
+                return;
+            }
+
+            // Remove emojis from each term and join with spaces
+            const cleanTerms = canvasTerms.map(term => removeAllEmojis(term)).filter(term => term);
+
+            const fullText = cleanTerms.join(' ');
+
+            const utterance = new SpeechSynthesisUtterance(fullText);
+            utterance.rate = 0.9;
+            utterance.pitch = 1.0;
+            utterance.volume = 1.0;
+
+            // Use selected voice if available
+            if (selectedVoice) {
+                utterance.voice = selectedVoice;
+            }
+
+            window.speechSynthesis.speak(utterance);
+        }
+
+        // Voice modal handlers
+        document.addEventListener('DOMContentLoaded', () => {
+            const selectVoiceBtn = document.getElementById('selectVoiceBtn');
+            const voiceModal = document.getElementById('voiceModal');
+            const closeVoiceModalBtn = document.getElementById('closeVoiceModalBtn');
+
+            selectVoiceBtn.addEventListener('click', () => {
+                populateVoiceModal();
+                voiceModal.style.display = 'flex';
+            });
+
+            closeVoiceModalBtn.addEventListener('click', () => {
+                voiceModal.style.display = 'none';
+            });
+
+            // Close on background click
+            voiceModal.addEventListener('click', (e) => {
+                if (e.target === voiceModal) {
+                    voiceModal.style.display = 'none';
+                }
+            });
+        });
+
+        // Setup Modal (API Key + Voice) Management
         let apiKey = localStorage.getItem('openai_api_key') || sessionStorage.getItem('openai_api_key') || '';
-        const apiKeyModal = document.getElementById('apiKeyModal');
+        const setupModal = document.getElementById('setupModal');
         const apiKeyInput = document.getElementById('apiKeyInput');
-        const saveApiKeyBtn = document.getElementById('saveApiKeyBtn');
+        const saveSetupBtn = document.getElementById('saveSetupBtn');
+        const testVoiceBtn = document.getElementById('testVoiceBtn');
         const changeApiKeyBtn = document.getElementById('changeApiKeyBtn');
         const sessionOnlyCheckbox = document.getElementById('sessionOnlyCheckbox');
         const httpsWarning = document.getElementById('httpsWarning');
+        const voiceSelectModal = document.getElementById('voiceSelectModal');
 
         // Check if using HTTPS
         if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
             httpsWarning.style.display = 'block';
         }
 
-        // Check if API key exists on load
-        if (apiKey) {
-            apiKeyModal.style.display = 'none';
+        // Check if API key and voice are already set
+        const hasVoice = localStorage.getItem('tts_voice');
+        if (apiKey && hasVoice) {
+            setupModal.style.display = 'none';
         }
 
         // Check if user previously selected session-only mode
@@ -833,7 +1302,25 @@
             sessionOnlyCheckbox.checked = true;
         }
 
-        saveApiKeyBtn.addEventListener('click', () => {
+        // Test voice button
+        testVoiceBtn.addEventListener('click', () => {
+            const voiceName = voiceSelectModal.value;
+            if (voiceName) {
+                const testVoice = availableVoices.find(v => v.name === voiceName);
+                const utterance = new SpeechSynthesisUtterance('Hello! This is how I sound.');
+                utterance.voice = testVoice;
+                utterance.rate = 0.9;
+                window.speechSynthesis.cancel();
+                window.speechSynthesis.speak(utterance);
+            } else {
+                const utterance = new SpeechSynthesisUtterance('Hello! This is the default voice.');
+                utterance.rate = 0.9;
+                window.speechSynthesis.cancel();
+                window.speechSynthesis.speak(utterance);
+            }
+        });
+
+        saveSetupBtn.addEventListener('click', () => {
             const key = apiKeyInput.value.trim();
             if (!key) {
                 alert('Please enter a valid API key');
@@ -843,9 +1330,17 @@
                 alert('Invalid API key format. OpenAI keys start with "sk-"');
                 return;
             }
+
+            const voiceSelectModal = document.getElementById('voiceSelectModal');
+            const voiceName = voiceSelectModal ? voiceSelectModal.value : '';
+            if (!voiceName) {
+                alert('Please select a voice for text-to-speech');
+                return;
+            }
+
             apiKey = key;
 
-            // Store based on user preference
+            // Store API key based on user preference
             if (sessionOnlyCheckbox.checked) {
                 sessionStorage.setItem('openai_api_key', key);
                 localStorage.setItem('use_session_only', 'true');
@@ -856,25 +1351,34 @@
                 sessionStorage.removeItem('openai_api_key');
             }
 
-            apiKeyModal.style.display = 'none';
+            // Store voice selection
+            selectedVoice = availableVoices.find(v => v.name === voiceName);
+            localStorage.setItem('tts_voice', voiceName);
+
+            // Update voice button text
+            updateVoiceButtonText(voiceName);
+
+            setupModal.style.display = 'none';
             apiKeyInput.value = '';
         });
 
         changeApiKeyBtn.addEventListener('click', () => {
-            apiKeyModal.style.display = 'flex';
+            setupModal.style.display = 'flex';
             apiKeyInput.value = '';
             apiKeyInput.focus();
         });
 
         apiKeyInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
-                saveApiKeyBtn.click();
+                saveSetupBtn.click();
             }
         });
 
         // Main app logic
         let allTerms = [];
         let canvasTerms = [];
+        let suggestionsDebounceTimer = null;
+        let lastSuggestedWords = '';
 
         // Category data with emojis and words
         const categories = {
@@ -896,8 +1400,6 @@
             '📦 Common Nouns': { emoji: '📦', name: 'Common Nouns', words: ['👤 person', '👥 people', '👨 man', '👩 woman', '👶 child', '👨‍👩‍👧‍👦 family', '🤝 friend', '📦 thing', '📍 place', '⏰ time', '📅 day', '📆 year', '🛤️ way', '💼 work', '🏠 home', '🏡 house', '🚪 room', '🚪 door', '🪟 window', '🪑 table', '🪑 chair', '🛏️ bed', '🍽️ food', '💧 water', '💰 money', '📚 book', '📱 phone', '🚗 car', '🏙️ city', '🌍 country', '🌎 world', '💫 life', '✋ hand', '👁️ eye', '😊 face', '🧠 head', '🫀 body', '🧩 part', '↔️ side', '⬅️ back', '⬆️ top', '⬇️ bottom', '🏁 end', '📍 point', '💬 word', '🏷️ name', '🔢 number', '❓ question', '⚠️ problem', '💡 idea', '📖 story'] }
         };
 
-        const contextInput = document.getElementById('contextInput');
-        const generateBtn = document.getElementById('generateBtn');
         const wordBank = document.getElementById('wordBank');
         const workspace = document.getElementById('workspace');
         const loading = document.getElementById('loading');
@@ -905,14 +1407,13 @@
         const termCount = document.getElementById('termCount');
         const imageInput = document.getElementById('imageInput');
         const attachImageBtn = document.getElementById('attachImageBtn');
+        const speakAllBtn = document.getElementById('speakAllBtn');
 
         // Initialize with default categories
         displayWordBank();
 
-        generateBtn.addEventListener('click', generateTerms);
-        contextInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') generateTerms();
-        });
+        // Speak All button handler
+        speakAllBtn.addEventListener('click', speakAll);
 
         // Image upload handling
         attachImageBtn.addEventListener('click', () => {
@@ -925,7 +1426,7 @@
 
             if (!apiKey) {
                 alert('Please enter your API key first');
-                apiKeyModal.style.display = 'flex';
+                setupModal.style.display = 'flex';
                 imageInput.value = '';
                 return;
             }
@@ -959,9 +1460,8 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    // Set the description as context and auto-generate
-                    contextInput.value = data.description;
-                    await generateTerms();
+                    // Use the description as context to generate terms
+                    await generateTermsFromContext(data.description);
                 } else {
                     alert('Error analyzing image: ' + data.error);
                 }
@@ -975,21 +1475,19 @@
             }
         });
 
-        async function generateTerms() {
-            const context = contextInput.value.trim();
+        async function generateTermsFromContext(context) {
             if (!context) {
-                alert('Please enter a context');
+                alert('No context available');
                 return;
             }
 
             if (!apiKey) {
                 alert('Please enter your API key first');
-                apiKeyModal.style.display = 'flex';
+                setupModal.style.display = 'flex';
                 return;
             }
 
             loading.classList.add('show');
-            generateBtn.disabled = true;
 
             try {
                 const response = await fetch(buildUrl('/generate'), {
@@ -1026,7 +1524,6 @@
                 alert('Error generating terms: ' + error.message);
             } finally {
                 loading.classList.remove('show');
-                generateBtn.disabled = false;
             }
         }
 
@@ -1219,6 +1716,13 @@
             card.textContent = term;
             card.draggable = true;
 
+            // Click to speak
+            card.addEventListener('click', (e) => {
+                // Don't speak when clicking remove button
+                if (e.target.classList.contains('remove-btn')) return;
+                speak(term);
+            });
+
             // Remove button
             const removeBtn = document.createElement('div');
             removeBtn.className = 'remove-btn';
@@ -1233,6 +1737,9 @@
                 if (emptyState && canvasTerms.length === 0) {
                     emptyState.style.display = 'block';
                 }
+
+                // Update suggestions after removal
+                debouncedFetchSuggestions();
             });
             card.appendChild(removeBtn);
 
@@ -1262,12 +1769,117 @@
             if (emptyState && canvasTerms.length > 0) {
                 emptyState.style.display = 'none';
             }
+
+            // Update suggestions after adding
+            debouncedFetchSuggestions();
         }
 
         function updateTermCount() {
             const total = getAllTerms().length;
             termCount.textContent = `${total} words in bank`;
         }
+
+        // Suggestions functionality
+        async function fetchSuggestions() {
+            const suggestionsList = document.getElementById('suggestionsList');
+
+            // Get current workspace words
+            const wordsInWorkspace = Array.from(workspace.querySelectorAll('.canvas-term'))
+                .map(el => el.textContent.replace('×', '').trim())
+                .map(term => term.replace(/[\u{1F300}-\u{1F9FF}]/gu, '').trim())
+                .filter(term => term);
+
+            // Create a key for caching
+            const wordsKey = wordsInWorkspace.join(' ');
+
+            // Don't refetch if same words
+            if (wordsKey === lastSuggestedWords) {
+                return;
+            }
+            lastSuggestedWords = wordsKey;
+
+            // Show loading state
+            suggestionsList.innerHTML = '<div class="suggestions-loading">Loading suggestions...</div>';
+
+            try {
+                const response = await fetch(buildUrl('/suggest-next-words'), {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        words: wordsInWorkspace,
+                        api_key: apiKey
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch suggestions');
+                }
+
+                const data = await response.json();
+
+                if (data.success && data.suggestions) {
+                    displaySuggestions(data.suggestions);
+                } else {
+                    suggestionsList.innerHTML = '<div class="suggestions-empty">No suggestions available</div>';
+                }
+            } catch (error) {
+                console.error('Error fetching suggestions:', error);
+                suggestionsList.innerHTML = '<div class="suggestions-empty">Error loading suggestions</div>';
+            }
+        }
+
+        function displaySuggestions(suggestions) {
+            const suggestionsList = document.getElementById('suggestionsList');
+            suggestionsList.innerHTML = '';
+
+            suggestions.forEach(word => {
+                const item = document.createElement('div');
+                item.className = 'suggestion-item';
+                item.textContent = word;
+                item.draggable = true;
+
+                // Click to add to workspace
+                item.addEventListener('click', () => {
+                    addToCanvas(word);
+                    // Update suggestions after adding
+                    debouncedFetchSuggestions();
+                });
+
+                // Drag events
+                item.addEventListener('dragstart', (e) => {
+                    e.dataTransfer.effectAllowed = 'copy';
+                    e.dataTransfer.setData('text/plain', word);
+                    item.style.opacity = '0.5';
+                });
+
+                item.addEventListener('dragend', (e) => {
+                    item.style.opacity = '1';
+                });
+
+                suggestionsList.appendChild(item);
+            });
+        }
+
+        function debouncedFetchSuggestions() {
+            // Clear existing timer
+            if (suggestionsDebounceTimer) {
+                clearTimeout(suggestionsDebounceTimer);
+            }
+
+            // Set new timer for 1 second
+            suggestionsDebounceTimer = setTimeout(() => {
+                fetchSuggestions();
+            }, 1000);
+        }
+
+        // Fetch suggestions on page load (empty workspace = core vocab)
+        setTimeout(() => {
+            if (apiKey) {
+                fetchSuggestions();
+            }
+        }, 1000);
 
         // Sentence generation
         const generateSentencesBtn = document.getElementById('generateSentencesBtn');
@@ -1285,7 +1897,7 @@
 
             if (!apiKey) {
                 alert('Please enter your API key first');
-                apiKeyModal.style.display = 'flex';
+                setupModal.style.display = 'flex';
                 return;
             }
 
@@ -1322,6 +1934,12 @@
                         const sentenceItem = document.createElement('div');
                         sentenceItem.className = 'sentence-item';
                         sentenceItem.textContent = sentence;
+
+                        // Click to speak sentence
+                        sentenceItem.addEventListener('click', () => {
+                            speak(sentence);
+                        });
+
                         sentencesList.appendChild(sentenceItem);
                     });
                 } else {

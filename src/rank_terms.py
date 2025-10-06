@@ -107,58 +107,67 @@ def generate_candidate_terms(client: OpenAI, context: str, n: int = 500) -> List
     """
     prompt = f"""Given this context: "{context}"
 
-Generate {n} SINGLE WORDS for a VOCABULARY LIST that would help someone discuss this type of situation.
+Generate {n} BASIC, HIGH-FREQUENCY WORDS for someone learning to communicate using AAC (Augmentative and Alternative Communication).
 
-CRITICAL: Generate GENERAL, REUSABLE vocabulary - NOT specific image descriptions!
+Focus on CORE VOCABULARY - the most essential, frequently-used words that apply across many situations:
 
-❌ BAD (too specific to this exact scenario):
-- "yacht", "five friends", "another boat", "ceiling-mounted", "huskyboard"
+PRIORITY 1 - Core Communication Words (MOST IMPORTANT):
+- Basic needs: want, need, help, more, stop, go, yes, no, please, thank you
+- Basic verbs: eat, drink, sleep, sit, stand, walk, run, play, like, see, hear, feel
+- Basic nouns: person, mom, dad, friend, food, water, home, bed, chair, door, window
+- Basic descriptors: good, bad, happy, sad, big, small, hot, cold, now, later
+- Basic questions: what, where, when, who, why, how
 
-✅ GOOD (general vocabulary for this TYPE of situation):
-- For BOATING: "boat", "water", "sail", "friend", "trip", "ocean", "wave", "captain"
-- For CLASSROOM: "student", "teacher", "learn", "desk", "board", "question", "study"
-- For HOME: "cook", "eat", "sleep", "relax", "family", "room", "comfortable"
-
-Match vocabulary to the DOMAIN:
-- Boating/water → boat, water, sail, ocean, wave, dock, captain, crew, anchor
-- School/learning → student, teacher, study, learn, desk, board, question, test
-- Work/office → work, meeting, task, project, deadline, colleague, email
-- Home → cook, eat, sleep, relax, family, room, comfortable, clean
-- Tech/coding → code, program, debug, test, build, deploy (ONLY if context is technical)
+PRIORITY 2 - Context-Relevant Words:
+Then add words specific to this context, but keep them SIMPLE and GENERAL:
+- For BOATING: boat, water, swim, friend, fun, trip, go, sun, wave
+- For CLASSROOM: teacher, learn, book, read, write, desk, help, question
+- For HOME: cook, eat, sleep, family, room, clean, relax, comfortable
+- For PARK: play, swing, slide, run, fun, tree, grass, friend
+- For STORE: buy, want, pay, look, need, cart, food, item
 
 Rules:
-1. SINGLE words only (maximum 2 words for compound terms like "swimming pool")
-2. GENERAL vocabulary for the situation type, not specific details
-3. NO numbers or quantities ("five", "twenty", "several" is OK but "five friends" is NOT)
-4. NO articles or demonstratives ("another boat", "the yacht", "this person")
-5. Include: basic verbs, basic nouns, common adjectives, useful descriptive words
-6. NO proper nouns or brand names
+1. SINGLE words only (simple compound terms like "bathroom" are OK)
+2. Use HIGH-FREQUENCY words that appear in everyday communication
+3. Focus on words a child or non-verbal person would need most
+4. Prioritize ACTION words (verbs) and NEED words over descriptive/technical terms
+5. Include emotional/social words: happy, sad, angry, love, friend, sorry, thank you
+6. NO complex/technical vocabulary unless absolutely essential for context
+7. NO proper nouns or brand names
 
-Output ONLY single words, comma-separated."""
+Output ONLY single words, comma-separated, starting with the most essential communication words first."""
 
-    response = client.chat.completions.create(
-        model="gpt-4o",
-        max_tokens=3000,
-        messages=[
-            {"role": "user", "content": prompt}
-        ]
-    )
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            max_tokens=3000,
+            messages=[
+                {"role": "user", "content": prompt}
+            ]
+        )
 
-    response_text = response.choices[0].message.content.strip()
+        response_text = response.choices[0].message.content.strip()
 
-    # Clean response
-    if response_text.startswith('```'):
-        lines = response_text.split('\n')
-        for line in lines:
-            if line.strip() and not line.startswith('```'):
-                response_text = line
-                break
+        # Clean response
+        if response_text.startswith('```'):
+            lines = response_text.split('\n')
+            for line in lines:
+                if line.strip() and not line.startswith('```'):
+                    response_text = line
+                    break
 
-    # Parse terms
-    terms = [term.strip() for term in response_text.split(',') if term.strip()]
-    terms = [term for term in terms if not term.startswith('```')]
+        # Parse terms
+        terms = [term.strip() for term in response_text.split(',') if term.strip()]
+        terms = [term for term in terms if not term.startswith('```')]
 
-    return terms
+        if not terms:
+            raise ValueError(f"No terms could be parsed from response: {response_text[:200]}")
+
+        return terms
+
+    except Exception as e:
+        print(f"ERROR in generate_candidate_terms: {e}")
+        raise Exception(f"Failed to generate candidate terms: {str(e)}")
 
 
 def extract_terms_from_text(text: str) -> List[str]:

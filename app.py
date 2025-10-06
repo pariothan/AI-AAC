@@ -149,6 +149,9 @@ def generate():
         })
 
     except Exception as e:
+        print(f"ERROR in /generate endpoint: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
             'success': False,
             'error': str(e)
@@ -179,18 +182,24 @@ def generate_sentences():
         clean_words = [word.split(' ', 1)[-1] if ' ' in word else word for word in words]
         words_str = ", ".join(clean_words)
 
-        prompt = f"""Create 15-20 different short, simple sentences using ONLY these words IN THIS EXACT ORDER: {words_str}
+        prompt = f"""Create 15-20 different short, simple sentences using ONLY these words: {words_str}
 
 CRITICAL RULES:
 - Use ONLY the words provided - DO NOT add any other content words
 - You may ONLY add function words (the, a, an, is, are, was, were, to, at, in, on, etc.)
 - You may conjugate verbs as necessary (add -s, -ed, -ing)
 - You may add plural markers (-s, -es)
-- Keep the exact order of the content words given
-- Make the sentences grammatically correct
-- Be natural and simple
-- Vary the sentence structures and function words used
-- Show different ways to express the same idea with the given words
+- You may change pronoun case (I/me, he/him, she/her, they/them, etc.)
+- You may REORDER the words to create different sentence structures
+- Make the sentences grammatically correct and natural
+- Be simple and clear
+- Vary the sentence structures - use different word orders
+- Show different ways to express ideas with the given words
+- Create variety: statements, questions, different perspectives
+
+Examples of flexibility:
+- "I want go" → "I want to go" / "Do I want to go?" / "I go, I want"
+- "I feel happy" → "I feel happy" / "I am happy" / "Happy is how I feel"
 
 Return ONLY the sentences, one per line. No numbering, no extra text."""
 
@@ -209,6 +218,88 @@ Return ONLY the sentences, one per line. No numbering, no extra text."""
         })
 
     except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/suggest-next-words', methods=['POST'])
+def suggest_next_words():
+    try:
+        data = request.json
+        words = data.get('words', [])
+        api_key = data.get('api_key', '')
+
+        if not api_key:
+            return jsonify({'error': 'API key is required'}), 400
+
+        # Check rate limit
+        is_allowed, error_msg = check_rate_limit(api_key)
+        if not is_allowed:
+            return jsonify({'error': error_msg}), 429
+
+        # Create client with user's API key
+        openai_client = get_openai_client(api_key)
+
+        # If no words, return core vocabulary with emojis
+        if not words:
+            core_vocab = [
+                "👤 I", "💝 want", "📍 need", "🤝 help", "✅ yes", "❌ no",
+                "➕ more", "🚶 go", "⏹️ stop", "❤️ like", "💭 feel", "💪 can",
+                "🙏 please", "💝 thank you", "👍 good", "👎 bad"
+            ]
+            return jsonify({
+                'success': True,
+                'suggestions': core_vocab
+            })
+
+        # Build prompt for next word prediction
+        words_str = " ".join(words)
+        prompt = f"""Given these AAC (Augmentative and Alternative Communication) words in sequence: "{words_str}"
+
+Suggest 15 likely next words that would naturally continue this phrase for someone using AAC to communicate.
+
+CRITICAL RULES:
+- Focus on HIGH-FREQUENCY AAC vocabulary (basic verbs, nouns, function words)
+- Consider natural grammar and conversational flow
+- Prioritize words that help express needs, feelings, and actions
+- Include a mix of: verbs, nouns, adjectives, and function words (to, the, a, etc.)
+- Keep words SIMPLE and commonly used in everyday communication
+- NO complex or technical words
+- NO proper nouns
+
+Return ONLY the 15 words as a comma-separated list, nothing else.
+
+Example input: "I want"
+Example output: to, go, help, food, water, more, see, play, eat, sleep, this, that, you, my, some"""
+
+        response = openai_client.chat.completions.create(
+            model="gpt-4o-mini",  # Faster and cheaper
+            max_tokens=150,
+            temperature=0.7,  # Some creativity but not too random
+            messages=[{"role": "user", "content": prompt}]
+        )
+
+        response_text = response.choices[0].message.content.strip()
+
+        # Parse suggestions
+        suggestions = [word.strip() for word in response_text.split(',') if word.strip()]
+
+        # Limit to 15
+        suggestions = suggestions[:15]
+
+        # Add emojis to suggestions
+        suggestions_with_emojis = add_emojis_to_terms(suggestions, openai_client)
+
+        return jsonify({
+            'success': True,
+            'suggestions': suggestions_with_emojis
+        })
+
+    except Exception as e:
+        print(f"ERROR in /suggest-next-words endpoint: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
             'success': False,
             'error': str(e)
