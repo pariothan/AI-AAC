@@ -59,3 +59,18 @@ logs/
 *.temp
 tmp/
 temp/
+
+# AI Instructions and assistant files
+.claude/
+.cursor/
+.aider/
+ai-instructions.md
+prompts/
+instructions.md
+INSTRUCTIONS.md
+AI_INSTRUCTIONS.md
+.ai/
+assistant-instructions.md
+context.md
+CONTEXT.md
+*.ai.md
