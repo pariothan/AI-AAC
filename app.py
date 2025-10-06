@@ -1,34 +1,70 @@
+import os
 from flask import Flask, render_template, request, jsonify
 from flask_cors import CORS
-import anthropic
-import os
 from openai import OpenAI
-from rank_terms import generate_terms
+from src.rank_terms import generate_terms
 import base64
 from PIL import Image
 import io
-from dotenv import load_dotenv
-
-# Load environment variables
-load_dotenv()
+from collections import defaultdict
+from datetime import datetime, timedelta
+import hashlib
+from typing import Tuple
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 app = Flask(__name__)
 CORS(app)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_prefix=1)
 
-# API keys from .env file
-ANTHROPIC_KEY = os.getenv("ANTHROPIC_API_KEY")
-OPENAI_KEY = os.getenv("OPENAI_API_KEY")
+# Support mounting the app behind a reverse proxy on a subpath (e.g., /aac-demo)
+raw_base_path = os.environ.get("APP_BASE_PATH", "").strip()
+if raw_base_path in {"", "/"}:
+    BASE_PATH = ""
+else:
+    BASE_PATH = "/" + raw_base_path.strip("/")
 
-# Initialize clients
-anthropic_client = anthropic.Anthropic(api_key=ANTHROPIC_KEY)
-openai_client = OpenAI(api_key=OPENAI_KEY)
-print("✓ API clients initialized")
+# Rate limiting: Track requests per API key hash
+rate_limit_store = defaultdict(list)
+RATE_LIMIT_REQUESTS = 20  # Max requests per window
+RATE_LIMIT_WINDOW = 300  # 5 minutes in seconds
+
+def get_openai_client(api_key: str):
+    """Create OpenAI client with provided API key"""
+    if not api_key:
+        raise ValueError("API key is required")
+    return OpenAI(api_key=api_key)
+
+def check_rate_limit(api_key: str) -> Tuple[bool, str]:
+    """
+    Check if request is within rate limits.
+    Returns (is_allowed, error_message)
+    """
+    # Hash the API key for privacy (don't store actual keys)
+    key_hash = hashlib.sha256(api_key.encode()).hexdigest()[:16]
+
+    now = datetime.now()
+    cutoff_time = now - timedelta(seconds=RATE_LIMIT_WINDOW)
+
+    # Clean old requests
+    rate_limit_store[key_hash] = [
+        req_time for req_time in rate_limit_store[key_hash]
+        if req_time > cutoff_time
+    ]
+
+    # Check if limit exceeded
+    if len(rate_limit_store[key_hash]) >= RATE_LIMIT_REQUESTS:
+        wait_time = int((rate_limit_store[key_hash][0] - cutoff_time).total_seconds())
+        return False, f"Rate limit exceeded. Please wait {wait_time} seconds."
+
+    # Add current request
+    rate_limit_store[key_hash].append(now)
+    return True, ""
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('index.html', base_path=BASE_PATH)
 
-def add_emojis_to_terms(terms, anthropic_client):
+def add_emojis_to_terms(terms, openai_client):
     """
     Add emojis to a list of terms using a single API call.
     Returns a list of terms with emojis prepended.
@@ -49,13 +85,13 @@ Example output: "🏃 run, 💭 think, 💧 water"
 Be concise. Use the most appropriate single emoji for each term. Output the list on one line."""
 
     try:
-        message = anthropic_client.messages.create(
-            model="claude-sonnet-4-5-20250929",
+        response = openai_client.chat.completions.create(
+            model="gpt-4o",
             max_tokens=2000,
             messages=[{"role": "user", "content": prompt}]
         )
 
-        response_text = message.content[0].text.strip()
+        response_text = response.choices[0].message.content.strip()
 
         # Parse the response - split by comma and clean up
         emoji_terms = [term.strip() for term in response_text.split(',')]
@@ -76,15 +112,26 @@ def generate():
     try:
         data = request.json
         context = data.get('context', '')
+        api_key = data.get('api_key', '')
 
         if not context:
             return jsonify({'error': 'Context is required'}), 400
+
+        if not api_key:
+            return jsonify({'error': 'API key is required'}), 400
+
+        # Check rate limit
+        is_allowed, error_msg = check_rate_limit(api_key)
+        if not is_allowed:
+            return jsonify({'error': error_msg}), 429
+
+        # Create client with user's API key
+        openai_client = get_openai_client(api_key)
 
         # Generate terms using the rank_terms module
         result = generate_terms(
             context,
             n=100,
-            anthropic_client=anthropic_client,
             openai_client=openai_client
         )
 
@@ -93,7 +140,7 @@ def generate():
 
         # Add emojis with a single API call
         print("Adding emojis to terms...")
-        emoji_terms = add_emojis_to_terms(terms, anthropic_client)
+        emoji_terms = add_emojis_to_terms(terms, openai_client)
 
         return jsonify({
             'success': True,
@@ -112,9 +159,21 @@ def generate_sentences():
     try:
         data = request.json
         words = data.get('words', [])
+        api_key = data.get('api_key', '')
 
         if not words:
             return jsonify({'error': 'Words are required'}), 400
+
+        if not api_key:
+            return jsonify({'error': 'API key is required'}), 400
+
+        # Check rate limit
+        is_allowed, error_msg = check_rate_limit(api_key)
+        if not is_allowed:
+            return jsonify({'error': error_msg}), 429
+
+        # Create client with user's API key
+        openai_client = get_openai_client(api_key)
 
         # Remove emojis from words for cleaner sentence generation
         clean_words = [word.split(' ', 1)[-1] if ' ' in word else word for word in words]
@@ -135,13 +194,13 @@ CRITICAL RULES:
 
 Return ONLY the sentences, one per line. No numbering, no extra text."""
 
-        message = anthropic_client.messages.create(
-            model="claude-sonnet-4-5-20250929",
+        response = openai_client.chat.completions.create(
+            model="gpt-4o",
             max_tokens=2500,
             messages=[{"role": "user", "content": prompt}]
         )
 
-        response_text = message.content[0].text.strip()
+        response_text = response.choices[0].message.content.strip()
         sentences = [s.strip() for s in response_text.split('\n') if s.strip()]
 
         return jsonify({
@@ -164,6 +223,18 @@ def analyze_image():
         file = request.files['image']
         if file.filename == '':
             return jsonify({'error': 'No file selected'}), 400
+
+        api_key = request.form.get('api_key', '')
+        if not api_key:
+            return jsonify({'error': 'API key is required'}), 400
+
+        # Check rate limit
+        is_allowed, error_msg = check_rate_limit(api_key)
+        if not is_allowed:
+            return jsonify({'error': error_msg}), 400
+
+        # Create client with user's API key
+        openai_client = get_openai_client(api_key)
 
         # Read and process the image
         image_bytes = file.read()
@@ -197,7 +268,7 @@ def analyze_image():
         # Encode to base64
         image_base64 = base64.standard_b64encode(image_bytes).decode("utf-8")
 
-        # Generate description using Claude's vision
+        # Generate description using OpenAI's vision
         prompt = """Describe this image in a way that would help generate vocabulary words for someone learning to communicate.
 Focus on:
 - Main objects and subjects
@@ -208,20 +279,18 @@ Focus on:
 
 Provide a clear, concise description (2-3 sentences)."""
 
-        message = anthropic_client.messages.create(
-            model="claude-sonnet-4-5-20250929",
+        response = openai_client.chat.completions.create(
+            model="gpt-4o",
             max_tokens=1024,
             messages=[
                 {
                     "role": "user",
                     "content": [
                         {
-                            "type": "image",
-                            "source": {
-                                "type": "base64",
-                                "media_type": "image/jpeg",
-                                "data": image_base64,
-                            },
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{image_base64}"
+                            }
                         },
                         {
                             "type": "text",
@@ -232,7 +301,7 @@ Provide a clear, concise description (2-3 sentences)."""
             ],
         )
 
-        description = message.content[0].text.strip()
+        description = response.choices[0].message.content.strip()
 
         return jsonify({
             'success': True,
@@ -246,4 +315,6 @@ Provide a clear, concise description (2-3 sentences)."""
         }), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5001)
+    port = int(os.environ.get("PORT", 5001))
+    host = os.environ.get("HOST", "0.0.0.0")
+    app.run(host=host, port=port)

@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AAC Communication Builder</title>
+    <script>
+        window.APP_CONFIG = {
+            basePath: {{ base_path|tojson }}
+        };
+    </script>
     <style>
         :root {
             --primary: #5465ff;
@@ -663,6 +668,57 @@
     </style>
 </head>
 <body>
+    <!-- API Key Modal -->
+    <div id="apiKeyModal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.7); display: flex; align-items: center; justify-content: center; z-index: 2000;">
+        <div style="background: var(--surface); border-radius: var(--radius-md); padding: 32px; max-width: 500px; width: 90%; border: 1px solid var(--border); box-shadow: var(--shadow-lg);">
+            <h2 style="margin-bottom: 16px; font-size: 24px;">Welcome! 🔑</h2>
+
+            <!-- HTTPS Warning -->
+            <div id="httpsWarning" style="display: none; background: #fff4e6; border: 1px solid #ff9800; border-radius: var(--radius-sm); padding: 12px; margin-bottom: 16px;">
+                <div style="display: flex; gap: 8px; align-items: start;">
+                    <span style="font-size: 18px;">⚠️</span>
+                    <div style="font-size: 13px; color: #e65100;">
+                        <strong>Security Warning:</strong> You're not using HTTPS. Your API key may be visible to attackers. Only use this on trusted networks.
+                    </div>
+                </div>
+            </div>
+
+            <p style="margin-bottom: 16px; color: var(--text-muted); line-height: 1.6; font-size: 14px;">
+                To use this app, please enter your OpenAI API key.
+            </p>
+
+            <!-- Security notice -->
+            <div style="background: #f0f4ff; border: 1px solid #5465ff; border-radius: var(--radius-sm); padding: 12px; margin-bottom: 16px;">
+                <div style="font-size: 13px; color: var(--text-strong); line-height: 1.5;">
+                    <strong>🔒 Security Notice:</strong><br>
+                    • Your key is stored in your browser only<br>
+                    • Never share your API key with others<br>
+                    • Monitor your OpenAI usage regularly<br>
+                    • This app sends requests through our server
+                </div>
+            </div>
+
+            <input
+                type="password"
+                id="apiKeyInput"
+                placeholder="sk-..."
+                style="width: 100%; padding: 12px 16px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface-strong); font-size: 15px; margin-bottom: 12px;"
+            />
+
+            <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px; font-size: 14px; cursor: pointer;">
+                <input type="checkbox" id="sessionOnlyCheckbox" style="cursor: pointer;">
+                <span>Session only (clear key when browser closes)</span>
+            </label>
+
+            <div style="display: flex; gap: 12px;">
+                <button id="saveApiKeyBtn" class="btn btn-primary" style="flex: 1;">Save & Continue</button>
+            </div>
+            <p style="margin-top: 16px; font-size: 13px; color: var(--text-muted);">
+                Don't have an API key? <a href="https://platform.openai.com/api-keys" target="_blank" style="color: var(--primary); text-decoration: underline;">Get one from OpenAI</a>
+            </p>
+        </div>
+    </div>
+
     <div class="app-shell">
         <div class="container">
             <!-- Sidebar Word Bank -->
@@ -670,7 +726,10 @@
                 <div class="sidebar-header">
                     <div class="logo">
                         <span>Word Bank</span>
-                        <button class="focus-btn" id="focusWordsBtn">⇄</button>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="focus-btn" id="changeApiKeyBtn" title="Change API Key" style="font-size: 14px;">🔑</button>
+                            <button class="focus-btn" id="focusWordsBtn">⇄</button>
+                        </div>
                     </div>
                     <div class="input-container">
                         <input
@@ -739,6 +798,80 @@
     </div>
 
     <script>
+        const normalizeBasePath = (path) => {
+            if (!path || path === '/') {
+                return '';
+            }
+            return path.endsWith('/') ? path.slice(0, -1) : path;
+        };
+
+        const BASE_PATH = normalizeBasePath(window.APP_CONFIG?.basePath);
+        const buildUrl = (endpoint) => `${BASE_PATH}${endpoint}`;
+
+        // API Key Management
+        let apiKey = localStorage.getItem('openai_api_key') || sessionStorage.getItem('openai_api_key') || '';
+        const apiKeyModal = document.getElementById('apiKeyModal');
+        const apiKeyInput = document.getElementById('apiKeyInput');
+        const saveApiKeyBtn = document.getElementById('saveApiKeyBtn');
+        const changeApiKeyBtn = document.getElementById('changeApiKeyBtn');
+        const sessionOnlyCheckbox = document.getElementById('sessionOnlyCheckbox');
+        const httpsWarning = document.getElementById('httpsWarning');
+
+        // Check if using HTTPS
+        if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+            httpsWarning.style.display = 'block';
+        }
+
+        // Check if API key exists on load
+        if (apiKey) {
+            apiKeyModal.style.display = 'none';
+        }
+
+        // Check if user previously selected session-only mode
+        const useSessionOnly = localStorage.getItem('use_session_only') === 'true';
+        if (useSessionOnly) {
+            sessionOnlyCheckbox.checked = true;
+        }
+
+        saveApiKeyBtn.addEventListener('click', () => {
+            const key = apiKeyInput.value.trim();
+            if (!key) {
+                alert('Please enter a valid API key');
+                return;
+            }
+            if (!key.startsWith('sk-')) {
+                alert('Invalid API key format. OpenAI keys start with "sk-"');
+                return;
+            }
+            apiKey = key;
+
+            // Store based on user preference
+            if (sessionOnlyCheckbox.checked) {
+                sessionStorage.setItem('openai_api_key', key);
+                localStorage.setItem('use_session_only', 'true');
+                localStorage.removeItem('openai_api_key');
+            } else {
+                localStorage.setItem('openai_api_key', key);
+                localStorage.setItem('use_session_only', 'false');
+                sessionStorage.removeItem('openai_api_key');
+            }
+
+            apiKeyModal.style.display = 'none';
+            apiKeyInput.value = '';
+        });
+
+        changeApiKeyBtn.addEventListener('click', () => {
+            apiKeyModal.style.display = 'flex';
+            apiKeyInput.value = '';
+            apiKeyInput.focus();
+        });
+
+        apiKeyInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                saveApiKeyBtn.click();
+            }
+        });
+
         // Main app logic
         let allTerms = [];
         let canvasTerms = [];
@@ -746,20 +879,20 @@
         // Category data with emojis and words
         const categories = {
             '🤖 Context': { emoji: '🤖', name: 'Context', words: [] },
-            '👤 Pronouns': { emoji: '👤', name: 'Pronouns', words: ['👤 I', '👥 you', '👨 he', '👩 she', '⚡ it', '👫 we', '👥 they', '🙋 me', '🙋‍♂️ him', '🙋‍♀️ her', '🤝 us', '👬 them', '📌 my', '📍 your', '🔹 his', '🔸 her', '⭐ its', '🌟 our', '✨ their', '💎 mine', '🎁 yours', '💝 hers', '🏆 ours', '🎯 theirs', '👉 this', '👈 that', '🔽 these', '🔼 those', '❓ who', '❔ what', '🔀 which', '👤 whom', '🏷️ whose'] },
-            '❓ Question Words': { emoji: '❓', name: 'Question Words', words: ['❓ ?', '❓ who', '❔ what', '⏰ when', '📍 where', '🤔 why', '🛠️ how', '🔀 which', '🏷️ whose', '👤 whom', '💰 how much', '🔢 how many', '⏱️ how long', '📏 how far', '🔁 how often'] },
-            '📍 Prepositions': { emoji: '📍', name: 'Prepositions', words: ['📥 in', '🔛 on', '📍 at', '👉 by', '🤝 with', '⬅️ from', '➡️ to', '📦 of', '🎁 for', '💭 about', '⬆️ above', '↔️ across', '▶️ after', '🚫 against', '🛤️ along', '🎪 among', '🔄 around', '↗️ as', '⏪ before', '⬇️ behind', '🔽 below', '⤵️ beneath', '↕️ beside', '⬌ between', '🌌 beyond', '⬇️ down', '⏳ during', '🚷 except', '🏠 inside', '📥 into', '💝 like', '📌 near', '🔌 off', '🚪 out', '🏞️ outside', '🔝 over', '⏮️ past', '📅 since', '🔀 through', '🌐 throughout', '⏰ till', '🎯 toward', '⬇️ under', '⏳ until', '⬆️ up', '🔛 upon', '📦 within', '🚫 without'] },
-            '🙏 Politeness': { emoji: '🙏', name: 'Politeness', words: ['🙏 please', '💝 thank you', '🙌 thanks', '😔 sorry', '🙋 excuse me', '🎭 pardon', '🤗 welcome', '💖 appreciate', '🙏 grateful', '✨ kindly', '🤲 may I', '❓ would you', '🙋 could you', '🤝 if you don\'t mind', '💭 I\'d appreciate', '🎁 many thanks', '🤝 much obliged'] },
-            '👋 Greetings': { emoji: '👋', name: 'Greetings', words: ['👋 hello', '✋ hi', '🙌 hey', '🌅 good morning', '☀️ good afternoon', '🌆 good evening', '🌙 good night', '👋 goodbye', '✌️ bye', '👀 see you', '💝 take care', '🌟 have a good day', '🤝 nice to meet you', '❓ how are you', '🔥 what\'s up', '🤠 howdy', '🎭 greetings', '🤗 welcome'] },
-            '📍 Spatial/Location': { emoji: '🗺️', name: 'Spatial/Location', words: ['📍 here', '👉 there', '🌍 everywhere', '❓ somewhere', '🚫 nowhere', '🗺️ anywhere', '⬆️ up', '⬇️ down', '⬅️ left', '➡️ right', '▶️ forward', '◀️ backward', '🔜 ahead', '🔙 behind', '📌 nearby', '🌌 far', '🤏 close', '↗️ away', '🔄 around', '🏠 inside', '🌳 outside', '⬆️ upstairs', '⬇️ downstairs', '↔️ next to', '↕️ opposite', '🔗 adjacent'] },
-            '⏰ Time': { emoji: '⏰', name: 'Time', words: ['⚡ now', '⏰ then', '📅 today', '⏮️ yesterday', '⏭️ tomorrow', '🌙 tonight', '🌅 morning', '☀️ afternoon', '🌆 evening', '🌃 night', '⏰ later', '🔜 soon', '⏰ early', '⌛ late', '⏪ before', '⏩ after', '⏳ during', '⌚ while', '♾️ always', '🚫 never', '🔄 sometimes', '📊 often', '🥉 rarely', '📈 usually', '✅ already', '⏰ yet', '⏸️ still', '⚡ just', '🕐 recently', '⏮️ ago'] },
-            '👁️ Sensory Verbs': { emoji: '👁️', name: 'Sensory Verbs', words: ['👁️ see', '👀 look', '📺 watch', '🔍 observe', '💡 notice', '👁️ glimpse', '👁️ stare', '👀 gaze', '👁️ peek', '👂 hear', '🎧 listen', '🔊 sound', '👃 smell', '👃 sniff', '👅 taste', '🤚 touch', '💭 feel', '🧠 sense', '🎯 perceive', '⚡ experience'] },
-            '🧠 Mental/Action Verbs': { emoji: '🧠', name: 'Mental/Action Verbs', words: ['🧠 know', '💭 think', '✨ believe', '💡 understand', '🧠 remember', '🌫️ forget', '📚 learn', '💡 realize', '🔍 recognize', '🌈 imagine', '🤔 wonder', '💭 suppose', '📊 assume', '🎯 expect', '🌟 hope', '✨ wish', '💝 want', '📍 need', '❤️ like', '💖 love', '💔 hate', '⭐ prefer', '😊 enjoy', '🤔 mind', '💝 care', '😰 worry', '😨 fear', '🤨 doubt', '🤝 trust', '💬 mean', '🎯 intend', '📋 plan', '✅ decide', '🎯 choose', '🤔 consider', '🧩 figure', '🎲 guess', '🎰 bet', '⚡ do', '🔨 make', '📦 get', '🤲 take', '🎁 give', '📌 put', '🔧 use', '🔍 find', '👉 show', '🤝 help', '✅ let', '📦 keep', '👋 leave', '▶️ start', '🎬 begin', '⏹️ stop', '🏁 end', '✅ finish', '▶️ continue', '💪 try', '🎯 attempt', '✅ manage', '❌ fail', '🏆 succeed', '💼 work', '🎮 play', '😴 rest', '⏰ wait', '📍 stay', '🔒 remain', '🔄 become', '🔀 change', '🌱 grow', '📈 develop', '⬆️ improve', '📈 increase', '📉 decrease', '➕ add', '➖ remove', '✅ include', '🚫 exclude', '📦 contain', '🧩 consist', '🏷️ belong', '👑 own', '🤝 have', '💎 possess', '🚫 lack', '😢 miss', '📉 lose', '🏆 win', '📈 gain', '💰 earn', '🛒 buy', '💵 sell', '💸 spend', '💰 save', '🗑️ waste', '🤝 share', '➗ divide', '🔗 join', '✂️ separate', '🔗 connect', '📎 attach', '🔓 detach'] },
-            '🚶 Physical/Communication Verbs': { emoji: '🚶', name: 'Physical/Communication Verbs', words: ['🚶 go', '👋 come', '🏃 move', '🚶 walk', '🏃 run', '🦘 jump', '🧗 climb', '⬇️ fall', '🪑 sit', '🧍 stand', '🛏️ lie', '😴 sleep', '⏰ wake', '⬆️ rise', '🔄 turn', '👉 push', '🤲 pull', '⬆️ lift', '📦 carry', '🤲 hold', '✊ grab', '🤾 catch', '🎯 throw', '👊 hit', '🦵 kick', '🤚 touch', '🤲 reach', '👉 point', '👋 wave', '🤝 shake', '🙂 nod', '🚪 open', '🔒 close', '🔐 lock', '🔓 unlock', '💥 break', '🔧 fix', '🏗️ build', '🔨 make', '✨ create', '✂️ cut', '📄 tear', '🪢 bend', '📋 fold', '🤸 stretch', '🤏 squeeze', '👆 press', '🖐️ rub', '🖐️ scratch', '🧹 wipe', '✨ clean', '🚿 wash', '💨 dry', '👕 wear', '👔 dress', '➖ remove', '🪝 hang', '⬇️ drop', '💬 say', '🗣️ tell', '🗨️ speak', '💬 talk', '❓ ask', '💡 answer', '↩️ reply', '💬 respond', '📖 explain', '📝 describe', '💭 mention', '📢 state', '📣 declare', '📢 announce', '📰 report', 'ℹ️ inform', '🔔 notify', '⚠️ warn', '💡 advise', '💭 suggest', '🌟 recommend', '📋 propose', '🎁 offer', '🙏 request', '📢 demand', '📜 order', '👑 command', '🙏 beg', '😢 plead', '💢 argue', '💬 discuss', '⚖️ debate', '✅ agree', '❌ disagree', '🚫 deny', '✅ admit', '😔 confess', '🤝 promise', '✋ swear', '📢 claim', '💪 insist', '😤 complain', '👎 criticize', '👏 praise', '🙏 thank', '😔 apologize', '👋 greet', '🤝 introduce', '📞 call', '🏷️ name', '🤫 whisper', '📢 shout', '😱 yell', '😱 scream', '😢 cry', '😂 laugh', '😊 smile', '🍽️ eat', '🥤 drink'] },
-            '🔢 Quantity': { emoji: '🔢', name: 'Quantity', words: ['💯 all', '📊 some', '📈 many', '🤏 few', '📊 several', '💯 much', '🤏 little', '➕ more', '➖ less', '🏆 most', '🥉 least', '✅ enough', '📦 plenty', '📦 lots', '🚫 none', '❓ any', '1️⃣ each', '💯 every', '2️⃣ both', '🔀 either', '🚫 neither', '½ half', '💯 whole', '🧩 part', '🧩 piece'] },
-            '✨ Quality/Description': { emoji: '✨', name: 'Quality/Description', words: ['👍 good', '👎 bad', '📏 big', '🤏 small', '📐 large', '🤏 little', '📏 long', '📐 short', '🗼 tall', '⬆️ high', '⬇️ low', '↔️ wide', '🚪 narrow', '📚 thick', '📄 thin', '⚖️ heavy', '🪶 light', '🪨 hard', '🧸 soft', '🔥 hot', '❄️ cold', '☀️ warm', '🧊 cool', '✨ new', '📜 old', '👶 young', '⚡ fast', '🐌 slow', '✅ easy', '😰 difficult', '🪨 hard', '😊 simple', '🧩 complex', '✨ clean', '🗑️ dirty', '😍 beautiful', '👹 ugly', '😊 nice', '💖 pretty', '💪 strong', '😔 weak', '💡 bright', '🌑 dark', '📢 loud', '🤫 quiet', '📦 full', '📭 empty', '✅ right', '❌ wrong', '✅ true', '❌ false', '💎 real', '🎭 fake', '✅ safe', '⚠️ dangerous'] },
-            '🔗 Connectors': { emoji: '🔗', name: 'Connectors', words: ['➕ and', '🔀 or', '❗ but', '↗️ so', '💡 because', '❓ if', '➡️ then', '🔀 although', '🔀 though', '↔️ however', '➡️ therefore', '➡️ thus', '➡️ hence', '➕ moreover', '➕ furthermore', '➕ besides', '➕ also', '➕ too', '🔀 either', '🚫 neither', '❗ yet', '⏸️ still', '🔀 instead', '🔀 otherwise', '⏸️ meanwhile', '⏰ while', '↔️ whereas', '🚫 unless', '⏰ until', '📅 since'] },
-            '✅ Agreement/Disagreement': { emoji: '✅', name: 'Agreement/Disagreement', words: ['✅ yes', '❌ no', '👌 okay', '👌 ok', '👍 sure', '👌 alright', '😊 fine', '🤝 agreed', '💯 exactly', '💯 absolutely', '💯 definitely', '✅ certainly', '💯 of course', '✅ indeed', '✅ right', '✅ correct', '✅ true', '🤔 maybe', '🤷 perhaps', '❓ possibly', '📊 probably', '✅ I agree', '❌ I disagree', '🤔 I think so', '🤷 I don\'t think so'] },
+            '👤 Pronouns': { emoji: '👤', name: 'Pronouns', words: ['👤 I', '👥 you', '👨 he', '👩 she', '⚡ it', '👫 we', '👥 they', '🙋 me', '🙋‍♂️ him', '🙋‍♀️ her', '🤝 us', '👬 them', '📌 my', '📍 your', '🔹 his', '🔸 her', '⭐ its', '🌟 our', '✨ their', '👉 this', '👈 that', '🔽 these', '🔼 those', '❓ who', '❔ what', '🔀 which', '🏷️ whose'] },
+            '❓ Question Words': { emoji: '❓', name: 'Question Words', words: ['❓ who', '❔ what', '⏰ when', '📍 where', '🤔 why', '🛠️ how', '🔀 which', '🏷️ whose', '💰 how much', '🔢 how many', '⏱️ how long', '📏 how far', '🔁 how often'] },
+            '📍 Prepositions': { emoji: '📍', name: 'Prepositions', words: ['📥 in', '🔛 on', '📍 at', '👉 by', '🤝 with', '⬅️ from', '➡️ to', '📦 of', '🎁 for', '💭 about', '⬆️ above', '▶️ after', '🚫 against', '🛤️ along', '🎪 among', '🔄 around', '⏪ before', '⬇️ behind', '🔽 below', '⬌ between', '🌌 beyond', '⬇️ down', '⏳ during', '🚷 except', '🏠 inside', '📥 into', '💝 like', '📌 near', '🔌 off', '🚪 out', '🏞️ outside', '🔝 over', '⏮️ past', '📅 since', '🔀 through', '🎯 toward', '⬇️ under', '⏳ until', '⬆️ up', '📦 within', '🚫 without'] },
+            '🙏 Politeness': { emoji: '🙏', name: 'Politeness', words: ['🙏 please', '💝 thank you', '🙌 thanks', '😔 sorry', '🙋 excuse me', '🤗 welcome'] },
+            '👋 Greetings': { emoji: '👋', name: 'Greetings', words: ['👋 hello', '✋ hi', '🙌 hey', '🌅 good morning', '☀️ good afternoon', '🌆 good evening', '🌙 good night', '👋 goodbye', '✌️ bye', '👀 see you', '💝 take care', '🤝 nice to meet you', '❓ how are you'] },
+            '🗺️ Location': { emoji: '🗺️', name: 'Location', words: ['📍 here', '👉 there', '🌍 everywhere', '❓ somewhere', '🗺️ anywhere', '🚫 nowhere', '⬆️ up', '⬇️ down', '⬅️ left', '➡️ right', '▶️ forward', '◀️ backward', '🔜 ahead', '🔙 behind', '📌 nearby', '🌌 far', '🤏 close', '↗️ away', '🔄 around', '🏠 inside', '🌳 outside', '⬆️ upstairs', '⬇️ downstairs', '↔️ next to'] },
+            '⏰ Time': { emoji: '⏰', name: 'Time', words: ['⚡ now', '⏰ then', '📅 today', '⏮️ yesterday', '⏭️ tomorrow', '🌙 tonight', '🌅 morning', '☀️ afternoon', '🌆 evening', '🌃 night', '⏰ later', '🔜 soon', '⏰ early', '⌛ late', '⏪ before', '⏩ after', '⏳ during', '⌚ while', '♾️ always', '🚫 never', '🔄 sometimes', '📊 often', '🥉 rarely', '📈 usually', '✅ already', '⏰ yet', '⏸️ still', '⚡ just'] },
+            '👁️ Senses': { emoji: '👁️', name: 'Senses', words: ['👁️ see', '👀 look', '📺 watch', '👂 hear', '🎧 listen', '👃 smell', '👅 taste', '🤚 touch', '💭 feel'] },
+            '🧠 Thinking & Feeling': { emoji: '🧠', name: 'Thinking & Feeling', words: ['🧠 know', '💭 think', '✨ believe', '💡 understand', '🧠 remember', '🌫️ forget', '📚 learn', '🌈 imagine', '💝 want', '📍 need', '❤️ like', '💖 love', '💔 hate', '💝 care', '⚡ do', '🔨 make', '📦 get', '🤲 take', '🎁 give', '📌 put', '🔧 use', '🔍 find', '👉 show', '🤝 help', '✅ let', '📦 keep', '👋 leave', '▶️ start', '⏹️ stop', '🏁 end', '▶️ continue', '💪 try', '❌ fail', '💼 work', '🎮 play', '😴 rest', '⏰ wait', '📍 stay', '🔄 become', '🔀 change', '🌱 grow', '➕ add', '➖ remove', '📉 lose', '🏆 win', '🛒 buy', '💵 sell', '💸 spend', '💰 save', '🤝 share'] },
+            '🚶 Doing & Talking': { emoji: '🚶', name: 'Doing & Talking', words: ['🚶 go', '👋 come', '🏃 move', '🚶 walk', '🏃 run', '🦘 jump', '🧗 climb', '⬇️ fall', '🪑 sit', '🧍 stand', '😴 sleep', '⏰ wake', '🔄 turn', '👉 push', '🤲 pull', '⬆️ lift', '📦 carry', '🤲 hold', '✊ grab', '🤾 catch', '🎯 throw', '👊 hit', '🦵 kick', '🤚 touch', '🤲 reach', '👉 point', '👋 wave', '🚪 open', '🔒 close', '💥 break', '🔧 fix', '🏗️ build', '✨ clean', '🚿 wash', '💨 dry', '👕 wear', '➖ remove', '⬇️ drop', '💬 say', '🗣️ tell', '💬 talk', '❓ ask', '💡 answer', '↩️ reply', '📖 explain', '📝 describe', '📞 call', '📣 shout', '🤫 whisper', '😱 yell', '😂 laugh', '😊 smile', '🍽️ eat', '🥤 drink'] },
+            '🔢 Quantity': { emoji: '🔢', name: 'Quantity', words: ['💯 all', '📊 some', '📈 many', '🤏 few', '💯 much', '🤏 little', '➕ more', '➖ less', '🏆 most', '🥉 least', '✅ enough', '🚫 none', '❓ any', '1️⃣ each', '💯 every', '2️⃣ both', '🔀 either', '🚫 neither', '½ half', '💯 whole', '🧩 part', '🧩 piece'] },
+            '✨ Describing Words': { emoji: '✨', name: 'Describing Words', words: ['👍 good', '👎 bad', '📏 big', '🤏 small', '📏 long', '📐 short', '🗼 tall', '⬆️ high', '⬇️ low', '↔️ wide', '🚪 narrow', '📚 thick', '📄 thin', '⚖️ heavy', '🪶 light', '🪨 hard', '🧸 soft', '🔥 hot', '❄️ cold', '☀️ warm', '🧊 cool', '✨ new', '📜 old', '👶 young', '⚡ fast', '🐌 slow', '✅ easy', '😰 difficult', '✨ clean', '🗑️ dirty', '😊 nice', '💪 strong', '😔 weak', '💡 bright', '🌑 dark', '📢 loud', '🤫 quiet', '📦 full', '📭 empty', '✅ safe', '⚠️ dangerous'] },
+            '🔗 Connectors': { emoji: '🔗', name: 'Connectors', words: ['➕ and', '🔀 or', '❗ but', '↗️ so', '💡 because', '❓ if', '➡️ then', '⏰ while', '🚫 unless', '⏳ until', '📅 since'] },
+            '✅ Yes & No': { emoji: '✅', name: 'Yes & No', words: ['✅ yes', '❌ no', '👌 okay', '👍 sure', '😊 fine', '✅ right', '🤔 maybe', '✅ I agree', '❌ I disagree', '🤔 I think so', "🤷 I don't think so"] },
             '📦 Common Nouns': { emoji: '📦', name: 'Common Nouns', words: ['👤 person', '👥 people', '👨 man', '👩 woman', '👶 child', '👨‍👩‍👧‍👦 family', '🤝 friend', '📦 thing', '📍 place', '⏰ time', '📅 day', '📆 year', '🛤️ way', '💼 work', '🏠 home', '🏡 house', '🚪 room', '🚪 door', '🪟 window', '🪑 table', '🪑 chair', '🛏️ bed', '🍽️ food', '💧 water', '💰 money', '📚 book', '📱 phone', '🚗 car', '🏙️ city', '🌍 country', '🌎 world', '💫 life', '✋ hand', '👁️ eye', '😊 face', '🧠 head', '🫀 body', '🧩 part', '↔️ side', '⬅️ back', '⬆️ top', '⬇️ bottom', '🏁 end', '📍 point', '💬 word', '🏷️ name', '🔢 number', '❓ question', '⚠️ problem', '💡 idea', '📖 story'] }
         };
 
@@ -790,6 +923,13 @@
             const file = e.target.files[0];
             if (!file) return;
 
+            if (!apiKey) {
+                alert('Please enter your API key first');
+                apiKeyModal.style.display = 'flex';
+                imageInput.value = '';
+                return;
+            }
+
             loading.classList.add('show');
             document.querySelector('.loading-text').textContent = 'Analyzing image...';
             attachImageBtn.disabled = true;
@@ -797,8 +937,9 @@
             try {
                 const formData = new FormData();
                 formData.append('image', file);
+                formData.append('api_key', apiKey);
 
-                const response = await fetch('/analyze-image', {
+                const response = await fetch(buildUrl('/analyze-image'), {
                     method: 'POST',
                     body: formData
                 });
@@ -829,16 +970,22 @@
                 return;
             }
 
+            if (!apiKey) {
+                alert('Please enter your API key first');
+                apiKeyModal.style.display = 'flex';
+                return;
+            }
+
             loading.classList.add('show');
             generateBtn.disabled = true;
 
             try {
-                const response = await fetch('/generate', {
+                const response = await fetch(buildUrl('/generate'), {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ context })
+                    body: JSON.stringify({ context, api_key: apiKey })
                 });
 
                 const data = await response.json();
@@ -1112,17 +1259,23 @@
                 return;
             }
 
+            if (!apiKey) {
+                alert('Please enter your API key first');
+                apiKeyModal.style.display = 'flex';
+                return;
+            }
+
             generateSentencesBtn.disabled = true;
             generateSentencesBtn.textContent = 'Generating...';
             sentencesList.innerHTML = '<div class="sentences-empty">Generating sentences...</div>';
 
             try {
-                const response = await fetch('/generate-sentences', {
+                const response = await fetch(buildUrl('/generate-sentences'), {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ words: wordsInWorkspace })
+                    body: JSON.stringify({ words: wordsInWorkspace, api_key: apiKey })
                 });
 
                 const data = await response.json();

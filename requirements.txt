@@ -1,7 +1,14 @@
 anthropic
 fastapi
-uvicorn
-python-multipart
-python-dotenv
+flask
+flask-cors
+gunicorn
+numpy
+openai
 Pillow
 pillow-heif
+python-dotenv
+python-multipart
+scikit-learn
+spacy
+uvicorn

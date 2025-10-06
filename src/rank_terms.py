@@ -5,7 +5,6 @@ Given a context sentence, generates ~100 relevant, usable terms for that scenari
 Uses embeddings, semantic similarity, and diversity algorithms.
 """
 
-import anthropic
 import os
 import json
 import numpy as np
@@ -16,18 +15,12 @@ from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.cluster import KMeans
 import re
 from openai import OpenAI
-from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
-
-# Try to load spaCy model
+# Try to load spaCy model once; require manual installation for predictable deployments
 try:
     nlp = spacy.load("en_core_web_sm")
-except:
-    print("Downloading spaCy model...")
-    os.system("python -m spacy download en_core_web_sm")
-    nlp = spacy.load("en_core_web_sm")
+except OSError as exc:
+    raise RuntimeError("spaCy model 'en_core_web_sm' is not installed. Run 'python -m spacy download en_core_web_sm' before starting the app.") from exc
 
 
 # Configuration
@@ -108,7 +101,7 @@ def embed_batch(texts: List[str], openai_client: OpenAI, batch_size: int = 100) 
     return embeddings
 
 
-def generate_candidate_terms(client: anthropic.Anthropic, context: str, n: int = 500) -> List[str]:
+def generate_candidate_terms(client: OpenAI, context: str, n: int = 500) -> List[str]:
     """
     Generate candidate terms using LLM.
     """
@@ -143,15 +136,15 @@ Rules:
 
 Output ONLY single words, comma-separated."""
 
-    message = client.messages.create(
-        model="claude-sonnet-4-5-20250929",
+    response = client.chat.completions.create(
+        model="gpt-4o",
         max_tokens=3000,
         messages=[
             {"role": "user", "content": prompt}
         ]
     )
 
-    response_text = message.content[0].text.strip()
+    response_text = response.choices[0].message.content.strip()
 
     # Clean response
     if response_text.startswith('```'):
@@ -484,7 +477,7 @@ def diversify_with_quotas(terms: List[str], vectors: Dict[str, np.ndarray],
 
 
 def generate_terms(context: str, n: int = 100,
-                  anthropic_client: anthropic.Anthropic = None,
+                  anthropic_client: OpenAI = None,
                   openai_client: OpenAI = None) -> dict:
     """
     Main pipeline: generate ranked terms for a given context.
@@ -494,9 +487,7 @@ def generate_terms(context: str, n: int = 100,
     print(f"  \"{context}\"")
     print(f"{'='*70}\n")
 
-    if anthropic_client is None:
-        anthropic_client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-
+    # Handle backward compatibility - if anthropic_client is passed, ignore it
     if openai_client is None:
         openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
@@ -505,8 +496,8 @@ def generate_terms(context: str, n: int = 100,
     ctx_vec = embed_text(context, openai_client)
 
     # 2. Generate candidates
-    print("2. Generating candidate terms with Claude...")
-    candidates = generate_candidate_terms(anthropic_client, context, CONFIG["neighbor_pool"])
+    print("2. Generating candidate terms with OpenAI...")
+    candidates = generate_candidate_terms(openai_client, context, CONFIG["neighbor_pool"])
 
     # Add terms extracted from context itself
     candidates.extend(extract_terms_from_text(context))
@@ -586,13 +577,13 @@ def print_results(result: dict):
 if __name__ == "__main__":
     import sys
 
-    # API keys from .env file
-    anthropic_key = os.getenv("ANTHROPIC_API_KEY")
+    # API key from environment or command line
     openai_key = os.getenv("OPENAI_API_KEY")
 
-    if not anthropic_key or not openai_key:
-        print("ERROR: API keys not found in .env file")
-        print("Please create a .env file with ANTHROPIC_API_KEY and OPENAI_API_KEY")
+    if not openai_key:
+        print("ERROR: API key not found")
+        print("Please set OPENAI_API_KEY environment variable")
+        print("Example: export OPENAI_API_KEY='your-api-key'")
         sys.exit(1)
 
     # Get context from command line or prompt
@@ -601,18 +592,16 @@ if __name__ == "__main__":
     else:
         context = input("Enter context sentence: ")
 
-    # Initialize clients
+    # Initialize client
     try:
-        anthropic_client = anthropic.Anthropic(api_key=anthropic_key)
         openai_client = OpenAI(api_key=openai_key)
     except Exception as e:
-        print(f"ERROR initializing API clients: {e}")
+        print(f"ERROR initializing API client: {e}")
         sys.exit(1)
 
     # Generate terms
     try:
         result = generate_terms(context, n=100,
-                              anthropic_client=anthropic_client,
                               openai_client=openai_client)
 
         # Print results

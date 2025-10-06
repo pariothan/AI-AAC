@@ -1,6 +1,5 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.responses import JSONResponse, HTMLResponse
-import anthropic
 import os
 from dotenv import load_dotenv
 import base64
@@ -8,6 +7,7 @@ from typing import Dict
 from PIL import Image
 import pillow_heif
 from io import BytesIO
+from openai import OpenAI
 
 # Load environment variables from the parent directory
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
@@ -19,7 +19,7 @@ app = FastAPI()
 
 def get_image_description(image_bytes: bytes, mime_type: str) -> Dict[str, str]:
     """
-    Generate a detailed description of an image using Claude's vision capabilities.
+    Generate a detailed description of an image using OpenAI's vision capabilities.
 
     Args:
         image_bytes: The image file as bytes
@@ -28,19 +28,19 @@ def get_image_description(image_bytes: bytes, mime_type: str) -> Dict[str, str]:
     Returns:
         A dictionary containing the image description and details
     """
-    # Get API key - try IMG_GENERATOR specific key first, then fall back to general key
-    api_key = os.getenv("IMG_GENERATOR_ANTHRPIC_API_KEY")
+    # Get API key
+    api_key = os.getenv("OPENAI_API_KEY")
 
     if not api_key:
-        raise ValueError("No API key found. Please set ANTHROPIC_API_KEY or IMG_GENERATOR_ANTHRPIC_API_KEY in .env file")
+        raise ValueError("No API key found. Please set OPENAI_API_KEY in .env file")
 
-    # Initialize the Anthropic client
-    client = anthropic.Anthropic(api_key=api_key)
+    # Initialize the OpenAI client
+    client = OpenAI(api_key=api_key)
 
     # Encode image to base64
     image_base64 = base64.standard_b64encode(image_bytes).decode("utf-8")
 
-    # Create the prompt for Claude
+    # Create the prompt
     prompt = """Please provide a comprehensive description of this image. Include:
 
 1. Overall Description: What the image shows at a high level
@@ -51,21 +51,19 @@ def get_image_description(image_bytes: bytes, mime_type: str) -> Dict[str, str]:
 
 Be specific and descriptive."""
 
-    # Call the Claude API with vision
-    message = client.messages.create(
-        model="claude-sonnet-4-5-20250929",
+    # Call the OpenAI API with vision
+    response = client.chat.completions.create(
+        model="gpt-4o",
         max_tokens=1024,
         messages=[
             {
                 "role": "user",
                 "content": [
                     {
-                        "type": "image",
-                        "source": {
-                            "type": "base64",
-                            "media_type": mime_type,
-                            "data": image_base64,
-                        },
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:{mime_type};base64,{image_base64}"
+                        }
                     },
                     {
                         "type": "text",
@@ -77,18 +75,18 @@ Be specific and descriptive."""
     )
 
     # Extract the response
-    description = message.content[0].text
+    description = response.choices[0].message.content
 
     return {
         "description": description,
-        "model": "claude-sonnet-4-5-20250929"
+        "model": "gpt-4o"
     }
 
 
 def resize_image_if_needed(image_bytes: bytes, mime_type: str, max_size_mb: float = 5.0, max_dimension: int = 1568) -> tuple[bytes, str]:
     """
     Resize image if it's too large in file size or dimensions.
-    Claude API has limits: max 5MB per image, recommended max dimension 1568px.
+    OpenAI API has limits: max 20MB per image, but we keep lower limits for efficiency.
 
     Args:
         image_bytes: The image as bytes

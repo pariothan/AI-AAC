@@ -1,7 +1,0 @@
-flask
-flask-cors
-anthropic
-openai
-spacy
-scikit-learn
-numpy
