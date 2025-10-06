@@ -2,6 +2,13 @@
 
 A Flask web application that helps generate contextual vocabulary words and sentences for AAC (Augmentative and Alternative Communication) users. Uses OpenAI's GPT-4 for intelligent vocabulary generation and image analysis.
 
+## Team
+
+Built at the Oct-4 Hackathon 2025 by:
+- **Samuel Lederer** - Linguist & Developer
+- **[Elizabeth Weber](https://www.linkedin.com/in/liz-m-weber/)** - Bioengineer & Accessibility Specialist
+- **[Meeta Pandit](https://www.linkedin.com/in/meetapandit/)** - Data Engineer
+
 ## Features
 
 - 🤖 **Context-Based Vocabulary**: Generate relevant vocabulary words based on any context
