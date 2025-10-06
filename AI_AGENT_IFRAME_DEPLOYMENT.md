@@ -1,6 +1,6 @@
-# AI Operator Playbook: Host AAC Demo Externally and Embed via `<iframe>`
+# AI Operator Playbook: Host AI-AAC Externally and Embed via `<iframe>`
 
-Use this guide to deploy the AAC Communication Builder to a standalone hosting provider (Render/Fly.io/Railway/VPS) and embed it on the main website through an iframe. Visitors still supply their own OpenAI API keys within the iframe.
+Use this guide to deploy the AI-AAC to a standalone hosting provider (Render/Fly.io/Railway/VPS) and embed it on the main website through an iframe. Visitors still supply their own OpenAI API keys within the iframe.
 
 ## 0. Mission Inputs
 - Repository source code.

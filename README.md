@@ -1,4 +1,4 @@
-# AAC Communication Builder
+# AI-AAC
 
 A Flask web application that helps generate contextual vocabulary words and sentences for AAC (Augmentative and Alternative Communication) users. Uses OpenAI's GPT-4 for intelligent vocabulary generation and image analysis.
 

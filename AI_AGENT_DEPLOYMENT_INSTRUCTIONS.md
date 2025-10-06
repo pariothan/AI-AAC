@@ -1,6 +1,6 @@
-# AI Operator Playbook: Publish AAC Communication Builder at `/aac-demo`
+# AI Operator Playbook: Publish AI-AAC at `/aac-demo`
 
-This document guides an autonomous agent through publishing the AAC Communication Builder web app onto the owner's production website, exposed at the `/aac-demo` path. The demo requires visitors to supply their own OpenAI API keys through the UI.
+This document guides an autonomous agent through publishing the AI-AAC web app onto the owner's production website, exposed at the `/aac-demo` path. The demo requires visitors to supply their own OpenAI API keys through the UI.
 
 ## 0. Mission Inputs
 - Repository location: provided by operator (current working tree).
