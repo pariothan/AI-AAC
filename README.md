@@ -4,20 +4,11 @@ A Flask web application that helps generate contextual vocabulary words and sent
 
 ## Team
 
-Built at the Oct-4 Hackathon 2025 by:
-- **Samuel Lederer** - Linguist & Developer
+Built at the Oct-4 Bellevue Hackathon 2025 by:
+- **Samuel Lederer** - Linguist
 - **[Elizabeth Weber](https://www.linkedin.com/in/liz-m-weber/)** - Bioengineer & Accessibility Specialist
 - **[Meeta Pandit](https://www.linkedin.com/in/meetapandit/)** - Data Engineer
 
-## Features
-
-- 🤖 **Context-Based Vocabulary**: Generate relevant vocabulary words based on any context
-- 📷 **Image Analysis**: Upload images to automatically generate contextual vocabulary
-- 💬 **Sentence Building**: Drag-and-drop interface to build custom sentences
-- 🎯 **Smart Word Organization**: Pre-organized categories (pronouns, actions, descriptions, etc.)
-- ✨ **Emoji Support**: Visual word representation with contextual emojis
-- 🔒 **Secure**: HTTPS warnings, rate limiting, and session-only API key storage
-- 🎨 **Beautiful UI**: Modern, responsive design with drag-and-drop functionality
 
 ## Project Structure
 
@@ -140,7 +131,14 @@ python app.py
 
 ## License
 
-MIT License
+“Commons Clause” License Condition v1.0
+
+The Software is provided to you by the Licensor under the License, as defined below, subject to the following condition.
+
+Without limiting other conditions in the License, the grant of rights under the License will not include, and the License does not grant to you, the right to Sell the Software.
+
+For purposes of the foregoing, “Sell” means practicing any or all of the rights granted to you under the License to provide to third parties, for a fee or other consideration (including without limitation fees for hosting or consulting/ support services related to the Software), a product or service whose value derives, entirely or substantially, from the functionality of the Software. Any license notice or attribution required by the License must also include this Commons Clause License Condition notice.
+
 
 ## Hosting Behind `/aac-demo`
 
