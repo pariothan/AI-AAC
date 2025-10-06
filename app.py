@@ -86,7 +86,7 @@ Be concise. Use the most appropriate single emoji for each term. Output the list
 
     try:
         response = openai_client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-4o-mini",
             max_tokens=2000,
             messages=[{"role": "user", "content": prompt}]
         )
@@ -209,7 +209,7 @@ Examples of acceptable flexibility:
 Return ONLY the sentences, one per line. No numbering, no extra text."""
 
         response = openai_client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-4o-mini",
             max_tokens=2500,
             messages=[{"role": "user", "content": prompt}]
         )
@@ -376,7 +376,7 @@ Focus on:
 Provide a clear, concise description (2-3 sentences)."""
 
         response = openai_client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-4o-mini",
             max_tokens=1024,
             messages=[
                 {

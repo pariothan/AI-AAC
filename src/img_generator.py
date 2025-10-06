@@ -53,7 +53,7 @@ Be specific and descriptive."""
 
     # Call the OpenAI API with vision
     response = client.chat.completions.create(
-        model="gpt-4o",
+        model="gpt-4o-mini",
         max_tokens=1024,
         messages=[
             {
@@ -79,7 +79,7 @@ Be specific and descriptive."""
 
     return {
         "description": description,
-        "model": "gpt-4o"
+        "model": "gpt-4o-mini"
     }
 
 

@@ -139,7 +139,7 @@ Output ONLY single words, comma-separated, starting with the most essential comm
 
     try:
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-4o-mini",
             max_tokens=3000,
             messages=[
                 {"role": "user", "content": prompt}

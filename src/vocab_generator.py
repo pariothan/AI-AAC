@@ -32,7 +32,7 @@ Please provide ONLY the vocabulary words as a comma-separated list, with no addi
 
     # Call the OpenAI API
     response = client.chat.completions.create(
-        model="gpt-4o",
+        model="gpt-4o-mini",
         max_tokens=2048,
         messages=[
             {"role": "user", "content": prompt}
