@@ -808,8 +808,16 @@
 <body>
     <!-- Setup Modal (API Key + Voice) -->
     <div id="setupModal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.7); display: flex; align-items: center; justify-content: center; z-index: 2000;">
-        <div style="background: var(--surface); border-radius: var(--radius-md); padding: 32px; max-width: 500px; width: 90%; border: 1px solid var(--border); box-shadow: var(--shadow-lg);">
-            <h2 style="margin-bottom: 16px; font-size: 24px;">Welcome! 🔑</h2>
+        <div style="background: var(--surface); border-radius: var(--radius-md); padding: 32px; max-width: 500px; width: 90%; max-height: 85vh; overflow-y: auto; border: 1px solid var(--border); box-shadow: var(--shadow-lg);">
+            <h2 style="margin-bottom: 16px; font-size: 24px;">Welcome to AI-AAC! 💬</h2>
+
+            <!-- App Description - EDIT THIS SECTION -->
+            <div style="background: linear-gradient(135deg, #f0f4ff 0%, #e8edff 100%); border: 1px solid #5465ff; border-radius: var(--radius-sm); padding: 16px; margin-bottom: 20px;">
+                <h3 style="font-size: 16px; font-weight: 700; color: var(--text-strong); margin-bottom: 8px;">About This App</h3>
+                <p style="font-size: 14px; color: var(--text-strong); line-height: 1.6; margin: 0;">
+                    This is a demo of an AI-assisted AAC software designed to be an assistive technology for nonverbal communicators. Currently, AAC softwares provide ~50 words at a time, unchanging by context and are woefully inadequate for communication. There are hundreds of reasons a person may be nonverbal, and almost none of them involve an impairment in language comprehension, or uses that aren't in speech. With this software, context dependant suggestions make picking words easier, and the "generate sentences" button allows you to choose which version of the many nuanced ways that words can be combined you wish to say. There's also a button to send a photo, which will generate ~100 context-relevant vocabulary words that might help where you are! It currently requires an OpenAI key, and OpenAI will charge you for usage. I ended up using about 20 cents worth of credit in about three hours of testing. This can be made far more efficient in the future.
+                </p>
+            </div>
 
             <!-- HTTPS Warning -->
             <div id="httpsWarning" style="display: none; background: #fff4e6; border: 1px solid #ff9800; border-radius: var(--radius-sm); padding: 12px; margin-bottom: 16px;">
@@ -822,7 +830,7 @@
             </div>
 
             <p style="margin-bottom: 16px; color: var(--text-muted); line-height: 1.6; font-size: 14px;">
-                To use this app, please enter your OpenAI API key and select a voice.
+                To get started, please enter your OpenAI API key and select a voice.
             </p>
 
             <!-- Security notice -->
