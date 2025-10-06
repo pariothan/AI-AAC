@@ -944,6 +944,18 @@
                     body: formData
                 });
 
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    let errorMessage = 'Failed to analyze image';
+                    try {
+                        const errorData = JSON.parse(errorText);
+                        errorMessage = errorData.error || errorMessage;
+                    } catch (e) {
+                        errorMessage = errorText || errorMessage;
+                    }
+                    throw new Error(errorMessage);
+                }
+
                 const data = await response.json();
 
                 if (data.success) {
@@ -987,6 +999,18 @@
                     },
                     body: JSON.stringify({ context, api_key: apiKey })
                 });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    let errorMessage = 'Failed to generate vocabulary';
+                    try {
+                        const errorData = JSON.parse(errorText);
+                        errorMessage = errorData.error || errorMessage;
+                    } catch (e) {
+                        errorMessage = errorText || errorMessage;
+                    }
+                    throw new Error(errorMessage);
+                }
 
                 const data = await response.json();
 
@@ -1277,6 +1301,18 @@
                     },
                     body: JSON.stringify({ words: wordsInWorkspace, api_key: apiKey })
                 });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    let errorMessage = 'Failed to generate sentences';
+                    try {
+                        const errorData = JSON.parse(errorText);
+                        errorMessage = errorData.error || errorMessage;
+                    } catch (e) {
+                        errorMessage = errorText || errorMessage;
+                    }
+                    throw new Error(errorMessage);
+                }
 
                 const data = await response.json();
 
