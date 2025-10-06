@@ -313,58 +313,87 @@ Example output: to, go, help, food, water, more, see, play, eat, sleep, this, th
 @app.route('/analyze-image', methods=['POST'])
 def analyze_image():
     try:
+        print("\n=== Starting image analysis ===")
+
         if 'image' not in request.files:
+            print("ERROR: No image file in request")
             return jsonify({'error': 'No image file provided'}), 400
 
         file = request.files['image']
+        print(f"Received file: {file.filename}")
+
         if file.filename == '':
+            print("ERROR: Empty filename")
             return jsonify({'error': 'No file selected'}), 400
 
         api_key = request.form.get('api_key', '')
         if not api_key:
+            print("ERROR: No API key provided")
             return jsonify({'error': 'API key is required'}), 400
 
+        print("API key received (length: {})".format(len(api_key)))
+
         # Check rate limit
+        print("Checking rate limit...")
         is_allowed, error_msg = check_rate_limit(api_key)
         if not is_allowed:
+            print(f"Rate limit exceeded: {error_msg}")
             return jsonify({'error': error_msg}), 400
+        print("Rate limit OK")
 
         # Create client with user's API key
+        print("Creating OpenAI client...")
         openai_client = get_openai_client(api_key)
+        print("OpenAI client created successfully")
 
         # Read and process the image
+        print("Reading image bytes...")
         image_bytes = file.read()
+        print(f"Image size: {len(image_bytes)} bytes")
 
         # Resize if needed (max 5MB, max dimension 1568px)
+        print("Opening image with PIL...")
         image = Image.open(io.BytesIO(image_bytes))
+        print(f"Image opened: {image.size} pixels, mode: {image.mode}")
 
         # Convert RGBA to RGB if needed
         if image.mode in ('RGBA', 'LA', 'P'):
+            print(f"Converting image from {image.mode} to RGB...")
             background = Image.new('RGB', image.size, (255, 255, 255))
             if image.mode == 'P':
                 image = image.convert('RGBA')
             background.paste(image, mask=image.split()[-1] if image.mode in ('RGBA', 'LA') else None)
             image = background
+            print("Image converted to RGB")
         elif image.mode != 'RGB':
+            print(f"Converting image from {image.mode} to RGB...")
             image = image.convert('RGB')
+            print("Image converted to RGB")
 
         # Resize if too large
         max_dimension = 1568
         if max(image.size) > max_dimension:
+            print(f"Image too large ({max(image.size)}px), resizing to {max_dimension}px...")
             ratio = max_dimension / max(image.size)
             new_size = tuple(int(dim * ratio) for dim in image.size)
             image = image.resize(new_size, Image.Resampling.LANCZOS)
+            print(f"Image resized to {image.size}")
 
         # Convert back to bytes
+        print("Converting image to JPEG bytes...")
         img_byte_arr = io.BytesIO()
         image.save(img_byte_arr, format='JPEG', quality=85)
         img_byte_arr.seek(0)
         image_bytes = img_byte_arr.read()
+        print(f"JPEG size: {len(image_bytes)} bytes")
 
         # Encode to base64
+        print("Encoding image to base64...")
         image_base64 = base64.standard_b64encode(image_bytes).decode("utf-8")
+        print(f"Base64 encoded (length: {len(image_base64)})")
 
         # Generate description using OpenAI's vision
+        print("Calling OpenAI vision API...")
         prompt = """Describe this image in a way that would help generate vocabulary words for someone learning to communicate.
 Focus on:
 - Main objects and subjects
@@ -375,6 +404,7 @@ Focus on:
 
 Provide a clear, concise description (2-3 sentences)."""
 
+        print(f"Using model: gpt-4o-mini")
         response = openai_client.chat.completions.create(
             model="gpt-4o-mini",
             max_tokens=1024,
@@ -396,15 +426,21 @@ Provide a clear, concise description (2-3 sentences)."""
                 }
             ],
         )
+        print("OpenAI API call successful")
 
         description = response.choices[0].message.content.strip()
+        print(f"Generated description: {description[:100]}...")
 
+        print("=== Image analysis complete ===\n")
         return jsonify({
             'success': True,
             'description': description
         })
 
     except Exception as e:
+        print(f"ERROR in /analyze-image endpoint: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
             'success': False,
             'error': str(e)

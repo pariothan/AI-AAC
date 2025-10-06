@@ -748,6 +748,47 @@
             font-weight: 600;
         }
 
+        .progress-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            margin-bottom: 6px;
+            border-radius: 6px;
+            background: var(--surface-muted);
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .progress-item.completed {
+            background: #e8f5e9;
+        }
+
+        .progress-item.in-progress {
+            background: #fff9e6;
+            font-weight: 600;
+        }
+
+        .progress-icon {
+            font-size: 18px;
+            min-width: 24px;
+            text-align: center;
+        }
+
+        .progress-label {
+            color: var(--text-strong);
+        }
+
+        .progress-item.completed .progress-icon {
+            animation: checkmark 0.3s ease;
+        }
+
+        @keyframes checkmark {
+            0% { transform: scale(0.5); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
         @media (max-width: 1200px) {
             body {
                 height: auto;
@@ -977,6 +1018,48 @@
         <div class="loading-card">
             <div class="spinner"></div>
             <div class="loading-text">Generating words...</div>
+            <div id="progressChecklist" style="display: none; margin-top: 20px; text-align: left; max-width: 400px;">
+                <div class="progress-item" data-stage="1">
+                    <span class="progress-icon">⏳</span>
+                    <span class="progress-label">Analyzing image</span>
+                </div>
+                <div class="progress-item" data-stage="2">
+                    <span class="progress-icon">⏳</span>
+                    <span class="progress-label">Embedding context</span>
+                </div>
+                <div class="progress-item" data-stage="3">
+                    <span class="progress-icon">⏳</span>
+                    <span class="progress-label">Generating candidate terms</span>
+                </div>
+                <div class="progress-item" data-stage="4">
+                    <span class="progress-icon">⏳</span>
+                    <span class="progress-label">Normalizing and deduplicating</span>
+                </div>
+                <div class="progress-item" data-stage="5">
+                    <span class="progress-icon">⏳</span>
+                    <span class="progress-label">Computing term vectors</span>
+                </div>
+                <div class="progress-item" data-stage="6">
+                    <span class="progress-icon">⏳</span>
+                    <span class="progress-label">Computing relevance signals</span>
+                </div>
+                <div class="progress-item" data-stage="7">
+                    <span class="progress-icon">⏳</span>
+                    <span class="progress-label">Scoring terms</span>
+                </div>
+                <div class="progress-item" data-stage="8">
+                    <span class="progress-icon">⏳</span>
+                    <span class="progress-label">Categorizing terms</span>
+                </div>
+                <div class="progress-item" data-stage="9">
+                    <span class="progress-icon">⏳</span>
+                    <span class="progress-label">Ensuring variety</span>
+                </div>
+                <div class="progress-item" data-stage="10">
+                    <span class="progress-icon">⏳</span>
+                    <span class="progress-label">Adding emojis</span>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1416,6 +1499,80 @@
         const imageInput = document.getElementById('imageInput');
         const attachImageBtn = document.getElementById('attachImageBtn');
         const speakAllBtn = document.getElementById('speakAllBtn');
+        const progressChecklist = document.getElementById('progressChecklist');
+
+        // Progress tracker
+        function showProgressChecklist() {
+            progressChecklist.style.display = 'block';
+            resetProgressChecklist();
+            simulateProgress();
+        }
+
+        function hideProgressChecklist() {
+            progressChecklist.style.display = 'none';
+        }
+
+        function resetProgressChecklist() {
+            const items = progressChecklist.querySelectorAll('.progress-item');
+            items.forEach(item => {
+                item.classList.remove('completed', 'in-progress');
+                item.querySelector('.progress-icon').textContent = '⏳';
+            });
+        }
+
+        function updateProgress(stage) {
+            const item = progressChecklist.querySelector(`[data-stage="${stage}"]`);
+            if (!item) return;
+
+            // Mark previous stages as completed
+            for (let i = 1; i < stage; i++) {
+                const prevItem = progressChecklist.querySelector(`[data-stage="${i}"]`);
+                if (prevItem && !prevItem.classList.contains('completed')) {
+                    prevItem.classList.remove('in-progress');
+                    prevItem.classList.add('completed');
+                    prevItem.querySelector('.progress-icon').textContent = '✅';
+                }
+            }
+
+            // Mark current stage as in-progress
+            item.classList.add('in-progress');
+            item.querySelector('.progress-icon').textContent = '⚙️';
+        }
+
+        function completeAllProgress() {
+            const items = progressChecklist.querySelectorAll('.progress-item');
+            items.forEach(item => {
+                item.classList.remove('in-progress');
+                item.classList.add('completed');
+                item.querySelector('.progress-icon').textContent = '✅';
+            });
+        }
+
+        // Simulate progress through stages (approximate timings)
+        let progressInterval;
+        function simulateProgress() {
+            clearInterval(progressInterval);
+            let currentStage = 1;
+            const stageDurations = [5000, 8000, 12000, 5000, 15000, 8000, 5000, 5000, 8000, 7000]; // milliseconds per stage
+
+            updateProgress(1);
+            let elapsed = 0;
+
+            progressInterval = setInterval(() => {
+                elapsed += 1000;
+
+                // Check if we should move to next stage
+                let totalTime = 0;
+                for (let i = 0; i < currentStage; i++) {
+                    totalTime += stageDurations[i];
+                }
+
+                if (elapsed >= totalTime && currentStage < 10) {
+                    currentStage++;
+                    updateProgress(currentStage);
+                }
+            }, 1000);
+        }
 
         // Initialize with default categories
         displayWordBank();
@@ -1441,6 +1598,7 @@
 
             loading.classList.add('show');
             document.querySelector('.loading-text').textContent = 'Analyzing image to generate contextually relevant vocab. This takes 1-2 minutes right now. It will be much faster in the future with some optimization work.';
+            showProgressChecklist();
             attachImageBtn.disabled = true;
 
             try {
@@ -1476,8 +1634,13 @@
             } catch (error) {
                 alert('Error analyzing image: ' + error.message);
             } finally {
-                loading.classList.remove('show');
-                document.querySelector('.loading-text').textContent = 'Generating words...';
+                clearInterval(progressInterval);
+                completeAllProgress();
+                setTimeout(() => {
+                    loading.classList.remove('show');
+                    hideProgressChecklist();
+                    document.querySelector('.loading-text').textContent = 'Generating words...';
+                }, 800); // Show completed state briefly
                 attachImageBtn.disabled = false;
                 imageInput.value = ''; // Reset file input
             }
