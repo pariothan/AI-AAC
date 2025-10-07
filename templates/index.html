@@ -2043,7 +2043,7 @@
                 return;
             }
 
-            if (!apiKey) {
+            if (!apiKey && !hasServerKey) {
                 alert('Please enter your API key first');
                 setupModal.style.display = 'flex';
                 return;
