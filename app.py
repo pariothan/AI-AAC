@@ -215,20 +215,25 @@ def generate_sentences():
     try:
         data = request.json
         words = data.get('words', [])
-        api_key = data.get('api_key', '')
+        user_api_key = data.get('api_key', '')
 
         if not words:
             return jsonify({'error': 'Words are required'}), 400
 
+        # Use server API key if available, otherwise fall back to user-provided key
+        server_api_key = os.environ.get('OPENAI_API_KEY', '')
+        api_key = server_api_key if server_api_key else user_api_key
+
         if not api_key:
             return jsonify({'error': 'API key is required'}), 400
 
-        # Check rate limit
-        is_allowed, error_msg = check_rate_limit(api_key)
+        # Check rate limit (use a generic identifier for server key)
+        rate_limit_key = 'SERVER_KEY' if server_api_key else api_key
+        is_allowed, error_msg = check_rate_limit(rate_limit_key)
         if not is_allowed:
             return jsonify({'error': error_msg}), 429
 
-        # Create client with user's API key
+        # Create client with API key
         openai_client = get_openai_client(api_key)
 
         # Remove emojis from words for cleaner sentence generation
@@ -289,17 +294,22 @@ def suggest_next_words():
     try:
         data = request.json
         words = data.get('words', [])
-        api_key = data.get('api_key', '')
+        user_api_key = data.get('api_key', '')
+
+        # Use server API key if available, otherwise fall back to user-provided key
+        server_api_key = os.environ.get('OPENAI_API_KEY', '')
+        api_key = server_api_key if server_api_key else user_api_key
 
         if not api_key:
             return jsonify({'error': 'API key is required'}), 400
 
-        # Check rate limit
-        is_allowed, error_msg = check_rate_limit(api_key)
+        # Check rate limit (use a generic identifier for server key)
+        rate_limit_key = 'SERVER_KEY' if server_api_key else api_key
+        is_allowed, error_msg = check_rate_limit(rate_limit_key)
         if not is_allowed:
             return jsonify({'error': error_msg}), 429
 
-        # Create client with user's API key
+        # Create client with API key
         openai_client = get_openai_client(api_key)
 
         # If no words, return core vocabulary with emojis

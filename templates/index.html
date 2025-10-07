@@ -920,17 +920,14 @@
             <!-- Sidebar Word Bank -->
             <div class="sidebar" id="sidebar">
                 <div class="sidebar-header">
-                    <div class="logo">
-                        <span>Word Bank</span>
-                        <div style="display: flex; gap: 8px;">
+                    <div style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
+                        <div style="font-size: 20px; font-weight: 700; color: var(--text-strong);">Word Bank</div>
+                        <div style="display: flex; gap: 8px; justify-content: flex-start;">
                             <input type="file" id="imageInput" accept="image/*" style="display: none;">
                             <button class="focus-btn" id="attachImageBtn" title="Attach Image" style="font-size: 14px; display: flex; align-items: center; gap: 6px; width: auto; padding: 0 12px; white-space: nowrap;">📷 Add Context</button>
                             <button class="focus-btn" id="changeVoiceBtn" title="Change Voice" style="font-size: 14px;">🔊</button>
-                            <button class="focus-btn" id="focusWordsBtn">⇄</button>
+                            <button class="focus-btn" id="focusWordsBtn">→</button>
                         </div>
-                    </div>
-                    <div class="input-container">
-                        <button class="btn btn-primary" id="selectVoiceBtn" style="width: 100%;">🔊 Select Voice</button>
                     </div>
                 </div>
 
@@ -982,7 +979,7 @@
                     <div class="sentences-header-box">
                         <div class="sentences-header">
                             <span>Sentences</span>
-                            <button class="focus-btn" id="focusSentencesBtn">⇄</button>
+                            <button class="focus-btn" id="focusSentencesBtn">←</button>
                         </div>
                         <button class="btn btn-primary" id="generateSentencesBtn">Create Sentences</button>
                     </div>
@@ -1166,20 +1163,12 @@
             if (voice) {
                 selectedVoice = voice;
                 localStorage.setItem('tts_voice', voice.name);
-                updateVoiceButtonText(voice.name);
             } else {
                 selectedVoice = null;
                 localStorage.removeItem('tts_voice');
-                updateVoiceButtonText('Default Voice');
             }
         }
 
-        function updateVoiceButtonText(voiceName) {
-            const btn = document.getElementById('selectVoiceBtn');
-            if (btn) {
-                btn.textContent = `🔊 ${voiceName}`;
-            }
-        }
 
         function loadVoices() {
             availableVoices = window.speechSynthesis.getVoices();
@@ -1196,7 +1185,6 @@
                 const savedVoice = localStorage.getItem('tts_voice');
                 if (savedVoice) {
                     selectedVoice = availableVoices.find(v => v.name === savedVoice);
-                    updateVoiceButtonText(savedVoice);
                     if (voiceSelectModal) {
                         voiceSelectModal.value = savedVoice;
                     }
@@ -1324,14 +1312,8 @@
 
         // Voice modal handlers
         document.addEventListener('DOMContentLoaded', () => {
-            const selectVoiceBtn = document.getElementById('selectVoiceBtn');
             const voiceModal = document.getElementById('voiceModal');
             const closeVoiceModalBtn = document.getElementById('closeVoiceModalBtn');
-
-            selectVoiceBtn.addEventListener('click', () => {
-                populateVoiceModal();
-                voiceModal.style.display = 'flex';
-            });
 
             closeVoiceModalBtn.addEventListener('click', () => {
                 voiceModal.style.display = 'none';
@@ -1404,9 +1386,6 @@
             // Store voice selection
             selectedVoice = availableVoices.find(v => v.name === voiceName);
             localStorage.setItem('tts_voice', voiceName);
-
-            // Update voice button text
-            updateVoiceButtonText(voiceName);
 
             setupModal.style.display = 'none';
         });
@@ -2135,14 +2114,14 @@
             if (isFocused) {
                 sidebar.classList.remove('focused');
                 focusWordsBtn.classList.remove('active');
-                focusWordsBtn.textContent = '⇄';
+                focusWordsBtn.textContent = '→';
             } else {
                 sidebar.classList.add('focused');
                 sentencesPanel.classList.remove('focused');
                 focusWordsBtn.classList.add('active');
                 focusSentencesBtn.classList.remove('active');
-                focusWordsBtn.textContent = '⇆';
-                focusSentencesBtn.textContent = '⇄';
+                focusWordsBtn.textContent = '←';
+                focusSentencesBtn.textContent = '→';
             }
         });
 
@@ -2152,14 +2131,14 @@
             if (isFocused) {
                 sentencesPanel.classList.remove('focused');
                 focusSentencesBtn.classList.remove('active');
-                focusSentencesBtn.textContent = '⇄';
+                focusSentencesBtn.textContent = '←';
             } else {
                 sentencesPanel.classList.add('focused');
                 sidebar.classList.remove('focused');
                 focusSentencesBtn.classList.add('active');
                 focusWordsBtn.classList.remove('active');
-                focusSentencesBtn.textContent = '⇆';
-                focusWordsBtn.textContent = '⇄';
+                focusSentencesBtn.textContent = '→';
+                focusWordsBtn.textContent = '→';
             }
         });
     </script>
