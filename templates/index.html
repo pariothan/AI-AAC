@@ -1589,7 +1589,16 @@
             const file = e.target.files[0];
             if (!file) return;
 
+            console.log('\n' + '='.repeat(80));
+            console.log('📷 IMAGE UPLOAD STARTED');
+            console.log('='.repeat(80));
+            console.log('📁 File:', file.name);
+            console.log('📦 Size:', (file.size / 1024).toFixed(1), 'KB');
+            console.log('📄 Type:', file.type);
+            console.log('⏰ Started at:', new Date().toLocaleTimeString());
+
             if (!apiKey) {
+                console.error('❌ No API key available');
                 alert('Please enter your API key first');
                 setupModal.style.display = 'flex';
                 imageInput.value = '';
@@ -1602,6 +1611,7 @@
             attachImageBtn.disabled = true;
 
             try {
+                console.log('\n📤 STEP 1: Analyzing image with vision API...');
                 const formData = new FormData();
                 formData.append('image', file);
                 formData.append('api_key', apiKey);
@@ -1612,26 +1622,41 @@
                 });
 
                 if (!response.ok) {
+                    console.error('❌ Image analysis failed:', response.status, response.statusText);
                     const errorText = await response.text();
                     let errorMessage = 'Failed to analyze image';
                     try {
                         const errorData = JSON.parse(errorText);
                         errorMessage = errorData.error || errorMessage;
+                        console.error('❌ Error from server:', errorData);
                     } catch (e) {
                         errorMessage = errorText || errorMessage;
+                        console.error('❌ Raw error:', errorText);
                     }
                     throw new Error(errorMessage);
                 }
 
+                console.log('✅ Image analysis response received');
                 const data = await response.json();
 
                 if (data.success) {
+                    console.log('✅ Image analyzed successfully!');
+                    console.log('📝 Description:', data.description);
+                    console.log('\n📤 STEP 2: Generating vocabulary from description...');
+
                     // Use the description as context to generate terms
                     await generateTermsFromContext(data.description);
+
+                    console.log('✅ IMAGE UPLOAD COMPLETE');
+                    console.log('⏰ Completed at:', new Date().toLocaleTimeString());
+                    console.log('='.repeat(80) + '\n');
                 } else {
+                    console.error('❌ Image analysis returned success: false', data);
                     alert('Error analyzing image: ' + data.error);
                 }
             } catch (error) {
+                console.error('❌ IMAGE UPLOAD FAILED:', error);
+                console.error('Stack trace:', error.stack);
                 alert('Error analyzing image: ' + error.message);
             } finally {
                 clearInterval(progressInterval);
@@ -1648,19 +1673,28 @@
 
         async function generateTermsFromContext(context) {
             if (!context) {
+                console.error('❌ No context available');
                 alert('No context available');
                 return;
             }
 
             if (!apiKey) {
+                console.error('❌ No API key provided');
                 alert('Please enter your API key first');
                 setupModal.style.display = 'flex';
                 return;
             }
 
+            console.log('\n' + '='.repeat(80));
+            console.log('🚀 STARTING VOCAB GENERATION FROM CONTEXT');
+            console.log('='.repeat(80));
+            console.log('📝 Context:', context.substring(0, 100) + (context.length > 100 ? '...' : ''));
+            console.log('⏰ Started at:', new Date().toLocaleTimeString());
+
             loading.classList.add('show');
 
             try {
+                console.log('\n📤 Sending /generate request...');
                 const response = await fetch(buildUrl('/generate'), {
                     method: 'POST',
                     headers: {
@@ -1670,28 +1704,42 @@
                 });
 
                 if (!response.ok) {
+                    console.error('❌ Response not OK:', response.status, response.statusText);
                     const errorText = await response.text();
                     let errorMessage = 'Failed to generate vocabulary';
                     try {
                         const errorData = JSON.parse(errorText);
                         errorMessage = errorData.error || errorMessage;
+                        console.error('❌ Error from server:', errorData);
                     } catch (e) {
                         errorMessage = errorText || errorMessage;
+                        console.error('❌ Raw error:', errorText);
                     }
                     throw new Error(errorMessage);
                 }
 
+                console.log('✅ Response received, parsing JSON...');
                 const data = await response.json();
 
                 if (data.success) {
+                    console.log('✅ Success! Received', data.terms.length, 'terms');
+                    console.log('📊 Sample terms:', data.terms.slice(0, 5));
+
                     // Put generated terms in the Context category
                     categories['🤖 Context'].words = data.terms;
                     allTerms = getAllTerms();
                     displayWordBank();
+
+                    console.log('✅ Terms added to word bank');
+                    console.log('⏰ Completed at:', new Date().toLocaleTimeString());
+                    console.log('='.repeat(80) + '\n');
                 } else {
+                    console.error('❌ Server returned success: false', data);
                     alert('Error: ' + data.error);
                 }
             } catch (error) {
+                console.error('❌ GENERATION FAILED:', error);
+                console.error('Stack trace:', error.stack);
                 alert('Error generating terms: ' + error.message);
             } finally {
                 loading.classList.remove('show');

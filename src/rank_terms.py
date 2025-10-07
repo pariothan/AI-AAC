@@ -56,6 +56,7 @@ def embed_text(text: str, openai_client: OpenAI) -> np.ndarray:
     """
     # Handle empty or very short text
     if not text or len(text.strip()) < 2:
+        print(f"⚠️  Skipping empty/short text for embedding")
         return np.zeros(1536)
 
     try:
@@ -69,7 +70,7 @@ def embed_text(text: str, openai_client: OpenAI) -> np.ndarray:
         return embedding
 
     except Exception as e:
-        print(f"Warning: Embedding failed for '{text[:50]}...': {e}")
+        print(f"❌ Embedding failed for '{text[:50]}...': {e}")
         return np.zeros(1536)
 
 
@@ -78,6 +79,12 @@ def embed_batch(texts: List[str], openai_client: OpenAI, batch_size: int = 100) 
     Embed multiple texts in batches for efficiency.
     OpenAI allows up to 2048 texts per request.
     """
+    # Filter out empty texts before embedding
+    texts = [text.strip() for text in texts if text and text.strip()]
+
+    if not texts:
+        return []
+
     embeddings = []
 
     for i in range(0, len(texts), batch_size):
@@ -93,10 +100,31 @@ def embed_batch(texts: List[str], openai_client: OpenAI, batch_size: int = 100) 
             batch_embeddings = [np.array(item.embedding) for item in response.data]
             embeddings.extend(batch_embeddings)
 
+            print(f"   ✓ Embedded batch {i//batch_size + 1}/{(len(texts) + batch_size - 1)//batch_size}")
+
         except Exception as e:
-            print(f"Warning: Batch embedding failed for batch {i//batch_size}: {e}")
-            # Fallback: add zero vectors
-            embeddings.extend([np.zeros(1536) for _ in batch])
+            error_msg = str(e)
+            print(f"   ERROR: Batch embedding failed for batch {i//batch_size + 1}: {error_msg}")
+
+            # Try smaller batches as fallback
+            if batch_size > 10 and len(batch) > 10:
+                print(f"   Retrying with smaller batch size...")
+                try:
+                    small_batch_embeddings = embed_batch(batch, openai_client, batch_size=10)
+                    embeddings.extend(small_batch_embeddings)
+                    continue
+                except:
+                    pass
+
+            # If all else fails, try individual embeddings
+            print(f"   Falling back to individual embeddings...")
+            for text in batch:
+                try:
+                    single_emb = embed_text(text, openai_client)
+                    embeddings.append(single_emb)
+                except:
+                    # Last resort: zero vector
+                    embeddings.append(np.zeros(1536))
 
     return embeddings
 
@@ -105,6 +133,7 @@ def generate_candidate_terms(client: OpenAI, context: str, n: int = 500) -> List
     """
     Generate candidate terms using LLM.
     """
+    print(f"   🤖 Calling GPT-4o-mini API...")
     prompt = f"""Given this context: "{context}"
 
 Generate {n} BASIC, HIGH-FREQUENCY WORDS for someone learning to communicate using AAC (Augmentative and Alternative Communication).
@@ -147,9 +176,12 @@ Output ONLY single words, comma-separated, starting with the most essential comm
         )
 
         response_text = response.choices[0].message.content.strip()
+        print(f"   ✅ API call successful (received {len(response_text)} characters)")
 
         # Clean response
+        print(f"   🔍 Parsing response...")
         if response_text.startswith('```'):
+            print(f"      Detected code block formatting, cleaning...")
             lines = response_text.split('\n')
             for line in lines:
                 if line.strip() and not line.startswith('```'):
@@ -161,12 +193,14 @@ Output ONLY single words, comma-separated, starting with the most essential comm
         terms = [term for term in terms if not term.startswith('```')]
 
         if not terms:
+            print(f"   ❌ Failed to parse any terms from response")
             raise ValueError(f"No terms could be parsed from response: {response_text[:200]}")
 
+        print(f"   ✅ Parsed {len(terms)} terms successfully")
         return terms
 
     except Exception as e:
-        print(f"ERROR in generate_candidate_terms: {e}")
+        print(f"   ❌ ERROR in generate_candidate_terms: {e}")
         raise Exception(f"Failed to generate candidate terms: {str(e)}")
 
 
@@ -326,11 +360,24 @@ def compute_term_vectors(terms: List[str], openai_client: OpenAI) -> Dict[str, n
     """
     Compute embeddings for each term using OpenAI in batches.
     """
-    print(f"   Embedding {len(terms)} terms in batches...")
-    embeddings = embed_batch(terms, openai_client, batch_size=100)
+    # Filter out empty or very short terms before embedding
+    valid_terms = [term for term in terms if term and len(term.strip()) >= 2]
+
+    if not valid_terms:
+        print("   WARNING: No valid terms to embed")
+        return {}
+
+    print(f"   Embedding {len(valid_terms)} terms in batches...")
+
+    try:
+        # Use smaller batch size to avoid API issues
+        embeddings = embed_batch(valid_terms, openai_client, batch_size=50)
+    except Exception as e:
+        print(f"   ERROR in compute_term_vectors: {e}")
+        raise Exception(f"Failed to compute term vectors: {str(e)}")
 
     vectors = {}
-    for term, emb in zip(terms, embeddings):
+    for term, emb in zip(valid_terms, embeddings):
         vectors[term] = emb
 
     return vectors
@@ -492,54 +539,135 @@ def generate_terms(context: str, n: int = 100,
     Main pipeline: generate ranked terms for a given context.
     """
     print(f"\n{'='*70}")
-    print(f"Generating {n} terms for context:")
-    print(f"  \"{context}\"")
+    print(f"🚀 STARTING VOCAB GENERATION PIPELINE")
+    print(f"{'='*70}")
+    print(f"📝 Context: \"{context[:100]}{'...' if len(context) > 100 else ''}\"")
+    print(f"🎯 Target: {n} terms")
     print(f"{'='*70}\n")
 
     # Handle backward compatibility - if anthropic_client is passed, ignore it
     if openai_client is None:
+        print("⚙️  Initializing OpenAI client from environment...")
         openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        print("✅ OpenAI client initialized\n")
 
     # 1. Embed context
-    print("1. Embedding context with OpenAI...")
+    print("=" * 70)
+    print("STAGE 1: Embedding Context")
+    print("=" * 70)
+    print("📊 Using OpenAI text-embedding-3-small model...")
     ctx_vec = embed_text(context, openai_client)
+    print(f"✅ Context embedded successfully (vector dimension: {len(ctx_vec)})")
+    print()
 
     # 2. Generate candidates
-    print("2. Generating candidate terms with OpenAI...")
+    print("=" * 70)
+    print("STAGE 2: Generating Candidate Terms")
+    print("=" * 70)
+    print(f"🤖 Requesting {CONFIG['neighbor_pool']} candidate terms from GPT-4o-mini...")
     candidates = generate_candidate_terms(openai_client, context, CONFIG["neighbor_pool"])
+    print(f"✅ Received {len(candidates)} candidates from LLM")
 
     # Add terms extracted from context itself
-    candidates.extend(extract_terms_from_text(context))
-
-    print(f"   Generated {len(candidates)} raw candidates")
+    print("📝 Extracting additional terms from context using spaCy NLP...")
+    context_terms = extract_terms_from_text(context)
+    candidates.extend(context_terms)
+    print(f"✅ Extracted {len(context_terms)} terms from context text")
+    print(f"📊 Total raw candidates: {len(candidates)}")
+    print()
 
     # 3. Normalize and dedupe
-    print("3. Normalizing and deduplicating...")
+    print("=" * 70)
+    print("STAGE 3: Normalizing and Deduplicating")
+    print("=" * 70)
+    print("🔄 Applying normalization rules:")
+    print("   • Converting to lowercase")
+    print("   • Filtering by length (2-30 characters)")
+    print("   • Removing stopwords and bad phrases")
+    print("   • Removing multi-word phrases with articles")
+    print("   • Lemmatizing for duplicate detection")
+    original_count = len(candidates)
     candidates = normalize_and_dedupe(candidates)
-    print(f"   {len(candidates)} unique candidates after normalization")
+    print(f"✅ Reduced from {original_count} to {len(candidates)} unique candidates")
+    print(f"📉 Removed {original_count - len(candidates)} duplicates/invalid terms")
+    print()
 
     # 4. Compute vectors
-    print("4. Computing term vectors with OpenAI embeddings...")
+    print("=" * 70)
+    print("STAGE 4: Computing Term Vectors")
+    print("=" * 70)
+    print(f"📊 Embedding {len(candidates)} terms using OpenAI API...")
+    print("⚙️  Batch size: 50 terms per request")
+    print("⏳ This may take 1-2 minutes for large vocabularies...")
     term_vectors = compute_term_vectors(candidates, openai_client)
 
+    if not term_vectors:
+        raise Exception("No valid term vectors could be computed. This may be due to API errors or invalid candidate terms.")
+
+    print(f"✅ Successfully embedded {len(term_vectors)} terms")
+    print()
+
     # 5. Compute signals
-    print("5. Computing relevance signals...")
+    print("=" * 70)
+    print("STAGE 5: Computing Relevance Signals")
+    print("=" * 70)
+    print("🧮 Calculating similarity scores for each term:")
+    print("   • Topic similarity (how relevant to context)")
+    print("   • Action margin (preference for action words)")
     signals = compute_signals(candidates, term_vectors, ctx_vec, openai_client)
+    print(f"✅ Computed signals for {len(signals)} terms")
+    print()
 
     # 6. Score terms
-    print("6. Scoring terms...")
+    print("=" * 70)
+    print("STAGE 6: Scoring Terms")
+    print("=" * 70)
+    print("📊 Normalizing and combining signals into final scores...")
+    print("   • 70% weight on topic similarity")
+    print("   • 30% weight on action margin")
     scores = score_terms(signals)
+    print(f"✅ Scored {len(scores)} terms")
+
+    # Show top scores
+    top_scored = sorted(scores.items(), key=lambda x: x[1], reverse=True)[:5]
+    print("\n🏆 Top 5 scored terms:")
+    for i, (term, score) in enumerate(top_scored, 1):
+        print(f"   {i}. {term}: {score:.3f}")
+    print()
 
     # 7. Categorize
-    print("7. Categorizing terms...")
+    print("=" * 70)
+    print("STAGE 7: Categorizing Terms")
+    print("=" * 70)
+    print("🏷️  Assigning terms to categories...")
     categories = {term: categorize_term(term) for term in candidates}
 
+    # Count by category
+    from collections import Counter
+    category_counts = Counter(categories.values())
+    print(f"✅ Categorized {len(categories)} terms")
+    print("\n📊 Distribution by category:")
+    for cat, count in sorted(category_counts.items(), key=lambda x: x[1], reverse=True):
+        print(f"   • {cat}: {count}")
+    print()
+
     # 8. Diversify
-    print("8. Applying diversity selection...")
+    print("=" * 70)
+    print("STAGE 8: Applying Diversity Selection")
+    print("=" * 70)
+    print("🎯 Using category quotas and MMR (Maximal Marginal Relevance)...")
+    print("📋 Target quotas:")
+    for cat, quota in CONFIG["category_quotas"].items():
+        print(f"   • {cat}: {quota}")
     selected = diversify_with_quotas(candidates, term_vectors, scores, categories, n)
+    print(f"✅ Selected {len(selected)} diverse terms")
+    print()
 
     # 9. Build result
-    print(f"\n✓ Selected {len(selected)} terms\n")
+    print("=" * 70)
+    print("STAGE 9: Building Final Result")
+    print("=" * 70)
+    print("📦 Packaging terms with metadata...")
 
     result = {
         "context": context,
@@ -555,6 +683,15 @@ def generate_terms(context: str, n: int = 100,
 
     # Sort by score within result
     result["terms"].sort(key=lambda x: x["score"], reverse=True)
+
+    print(f"✅ Result package created with {len(result['terms'])} terms")
+    print("\n🏆 Top 10 final terms:")
+    for i, item in enumerate(result['terms'][:10], 1):
+        print(f"   {i}. {item['term']} (score: {item['score']:.3f}, {item['category']})")
+
+    print("\n" + "=" * 70)
+    print("✅ VOCAB GENERATION COMPLETE!")
+    print("=" * 70 + "\n")
 
     return result
 

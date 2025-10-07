@@ -74,3 +74,12 @@ assistant-instructions.md
 context.md
 CONTEXT.md
 *.ai.md
+
+# Documentation and notes (generated)
+FIX_SUMMARY.md
+LOGGING_GUIDE.md
+DETAILED_LOGGING_SUMMARY.md
+BROWSER_CONSOLE_LOGGING.md
+COMPLETE_LOGGING_SUMMARY.md
+LOGGING_QUICK_REFERENCE.md
+test_fix.py

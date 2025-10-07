@@ -110,37 +110,76 @@ Be concise. Use the most appropriate single emoji for each term. Output the list
 @app.route('/generate', methods=['POST'])
 def generate():
     try:
+        print("\n" + "="*80)
+        print("📥 RECEIVED /generate REQUEST")
+        print("="*80)
+
         data = request.json
         context = data.get('context', '')
         api_key = data.get('api_key', '')
 
+        print(f"📝 Context: {context[:100]}{'...' if len(context) > 100 else ''}")
+        print(f"🔑 API Key: {'*' * (len(api_key) - 4)}{api_key[-4:] if len(api_key) > 4 else '****'}")
+
         if not context:
+            print("❌ ERROR: No context provided")
             return jsonify({'error': 'Context is required'}), 400
 
         if not api_key:
+            print("❌ ERROR: No API key provided")
             return jsonify({'error': 'API key is required'}), 400
 
         # Check rate limit
+        print("🔍 Checking rate limit...")
         is_allowed, error_msg = check_rate_limit(api_key)
         if not is_allowed:
+            print(f"❌ Rate limit exceeded: {error_msg}")
             return jsonify({'error': error_msg}), 429
+        print("✅ Rate limit check passed")
 
         # Create client with user's API key
-        openai_client = get_openai_client(api_key)
+        try:
+            print("🔧 Initializing OpenAI client...")
+            openai_client = get_openai_client(api_key)
+            print("✅ OpenAI client created successfully")
+        except Exception as e:
+            print(f"❌ ERROR creating OpenAI client: {e}")
+            return jsonify({
+                'success': False,
+                'error': f'Failed to initialize OpenAI client: {str(e)}'
+            }), 500
 
         # Generate terms using the rank_terms module
-        result = generate_terms(
-            context,
-            n=100,
-            openai_client=openai_client
-        )
+        try:
+            print("\n🚀 Starting term generation pipeline...")
+            result = generate_terms(
+                context,
+                n=100,
+                openai_client=openai_client
+            )
+            print("✅ Term generation pipeline completed successfully")
+        except Exception as e:
+            print(f"❌ ERROR in generate_terms: {e}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({
+                'success': False,
+                'error': f'Failed to generate terms: {str(e)}'
+            }), 500
 
         # Extract just the terms
+        print(f"\n📊 Extracting {len(result['terms'])} terms from result...")
         terms = [item['term'] for item in result['terms']]
+        print(f"✅ Extracted terms successfully")
 
         # Add emojis with a single API call
-        print("Adding emojis to terms...")
+        print("\n😊 Adding emojis to terms...")
         emoji_terms = add_emojis_to_terms(terms, openai_client)
+        print(f"✅ Added emojis to {len(emoji_terms)} terms")
+
+        print("\n" + "="*80)
+        print("✅ /generate REQUEST COMPLETED SUCCESSFULLY")
+        print("="*80 + "\n")
 
         return jsonify({
             'success': True,
@@ -313,87 +352,92 @@ Example output: to, go, help, food, water, more, see, play, eat, sleep, this, th
 @app.route('/analyze-image', methods=['POST'])
 def analyze_image():
     try:
-        print("\n=== Starting image analysis ===")
+        print("\n" + "="*80)
+        print("📷 RECEIVED /analyze-image REQUEST")
+        print("="*80)
 
         if 'image' not in request.files:
-            print("ERROR: No image file in request")
+            print("❌ ERROR: No image file in request")
             return jsonify({'error': 'No image file provided'}), 400
 
         file = request.files['image']
-        print(f"Received file: {file.filename}")
+        print(f"📁 Received file: {file.filename}")
+        print(f"📄 Content type: {file.content_type}")
 
         if file.filename == '':
-            print("ERROR: Empty filename")
+            print("❌ ERROR: Empty filename")
             return jsonify({'error': 'No file selected'}), 400
 
         api_key = request.form.get('api_key', '')
         if not api_key:
-            print("ERROR: No API key provided")
+            print("❌ ERROR: No API key provided")
             return jsonify({'error': 'API key is required'}), 400
 
-        print("API key received (length: {})".format(len(api_key)))
+        print(f"🔑 API key received (length: {len(api_key)})")
 
         # Check rate limit
-        print("Checking rate limit...")
+        print("🔍 Checking rate limit...")
         is_allowed, error_msg = check_rate_limit(api_key)
         if not is_allowed:
-            print(f"Rate limit exceeded: {error_msg}")
+            print(f"❌ Rate limit exceeded: {error_msg}")
             return jsonify({'error': error_msg}), 400
-        print("Rate limit OK")
+        print("✅ Rate limit OK")
 
         # Create client with user's API key
-        print("Creating OpenAI client...")
+        print("🔧 Creating OpenAI client...")
         openai_client = get_openai_client(api_key)
-        print("OpenAI client created successfully")
+        print("✅ OpenAI client created successfully")
 
         # Read and process the image
-        print("Reading image bytes...")
+        print("\n📖 Reading image bytes...")
         image_bytes = file.read()
-        print(f"Image size: {len(image_bytes)} bytes")
+        print(f"✅ Image size: {len(image_bytes):,} bytes ({len(image_bytes) / 1024:.1f} KB)")
 
         # Resize if needed (max 5MB, max dimension 1568px)
-        print("Opening image with PIL...")
+        print("🖼️  Opening image with PIL...")
         image = Image.open(io.BytesIO(image_bytes))
-        print(f"Image opened: {image.size} pixels, mode: {image.mode}")
+        print(f"✅ Image opened: {image.size[0]}x{image.size[1]} pixels, mode: {image.mode}")
 
         # Convert RGBA to RGB if needed
         if image.mode in ('RGBA', 'LA', 'P'):
-            print(f"Converting image from {image.mode} to RGB...")
+            print(f"🎨 Converting image from {image.mode} to RGB...")
             background = Image.new('RGB', image.size, (255, 255, 255))
             if image.mode == 'P':
                 image = image.convert('RGBA')
             background.paste(image, mask=image.split()[-1] if image.mode in ('RGBA', 'LA') else None)
             image = background
-            print("Image converted to RGB")
+            print("✅ Image converted to RGB")
         elif image.mode != 'RGB':
-            print(f"Converting image from {image.mode} to RGB...")
+            print(f"🎨 Converting image from {image.mode} to RGB...")
             image = image.convert('RGB')
-            print("Image converted to RGB")
+            print("✅ Image converted to RGB")
 
         # Resize if too large
         max_dimension = 1568
         if max(image.size) > max_dimension:
-            print(f"Image too large ({max(image.size)}px), resizing to {max_dimension}px...")
+            print(f"📏 Image too large ({max(image.size)}px), resizing to {max_dimension}px...")
             ratio = max_dimension / max(image.size)
             new_size = tuple(int(dim * ratio) for dim in image.size)
             image = image.resize(new_size, Image.Resampling.LANCZOS)
-            print(f"Image resized to {image.size}")
+            print(f"✅ Image resized to {image.size[0]}x{image.size[1]}")
+        else:
+            print(f"✅ Image size OK, no resizing needed")
 
         # Convert back to bytes
-        print("Converting image to JPEG bytes...")
+        print("\n💾 Converting image to JPEG format...")
         img_byte_arr = io.BytesIO()
         image.save(img_byte_arr, format='JPEG', quality=85)
         img_byte_arr.seek(0)
         image_bytes = img_byte_arr.read()
-        print(f"JPEG size: {len(image_bytes)} bytes")
+        print(f"✅ JPEG size: {len(image_bytes):,} bytes ({len(image_bytes) / 1024:.1f} KB)")
 
         # Encode to base64
-        print("Encoding image to base64...")
+        print("🔐 Encoding image to base64...")
         image_base64 = base64.standard_b64encode(image_bytes).decode("utf-8")
-        print(f"Base64 encoded (length: {len(image_base64)})")
+        print(f"✅ Base64 encoded (length: {len(image_base64):,} characters)")
 
         # Generate description using OpenAI's vision
-        print("Calling OpenAI vision API...")
+        print("\n🤖 Calling OpenAI GPT-4o-mini vision API...")
         prompt = """Describe this image in a way that would help generate vocabulary words for someone learning to communicate.
 Focus on:
 - Main objects and subjects
@@ -404,7 +448,8 @@ Focus on:
 
 Provide a clear, concise description (2-3 sentences)."""
 
-        print(f"Using model: gpt-4o-mini")
+        print(f"⚙️  Using model: gpt-4o-mini")
+        print(f"📤 Sending vision request...")
         response = openai_client.chat.completions.create(
             model="gpt-4o-mini",
             max_tokens=1024,
@@ -426,12 +471,16 @@ Provide a clear, concise description (2-3 sentences)."""
                 }
             ],
         )
-        print("OpenAI API call successful")
+        print("✅ OpenAI vision API call successful")
 
         description = response.choices[0].message.content.strip()
-        print(f"Generated description: {description[:100]}...")
+        print(f"📝 Generated description ({len(description)} chars):")
+        print(f"   \"{description}\"")
 
-        print("=== Image analysis complete ===\n")
+        print("\n" + "="*80)
+        print("✅ /analyze-image REQUEST COMPLETED SUCCESSFULLY")
+        print("="*80 + "\n")
+
         return jsonify({
             'success': True,
             'description': description
