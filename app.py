@@ -107,6 +107,12 @@ Be concise. Use the most appropriate single emoji for each term. Output the list
         # Fallback: return terms with default emoji
         return [f"✨ {term}" for term in terms]
 
+@app.route('/api/check-server-key', methods=['GET'])
+def check_server_key():
+    """Check if server has an API key configured"""
+    has_key = bool(os.environ.get('OPENAI_API_KEY', ''))
+    return jsonify({'hasServerKey': has_key})
+
 @app.route('/generate', methods=['POST'])
 def generate():
     try:
@@ -116,22 +122,30 @@ def generate():
 
         data = request.json
         context = data.get('context', '')
-        api_key = data.get('api_key', '')
+        user_api_key = data.get('api_key', '')
+
+        # Use server API key if available, otherwise fall back to user-provided key
+        server_api_key = os.environ.get('OPENAI_API_KEY', '')
+        api_key = server_api_key if server_api_key else user_api_key
 
         print(f"📝 Context: {context[:100]}{'...' if len(context) > 100 else ''}")
-        print(f"🔑 API Key: {'*' * (len(api_key) - 4)}{api_key[-4:] if len(api_key) > 4 else '****'}")
+        if server_api_key:
+            print(f"🔑 Using server API key")
+        else:
+            print(f"🔑 Using user-provided API key: {'*' * (len(api_key) - 4)}{api_key[-4:] if len(api_key) > 4 else '****'}")
 
         if not context:
             print("❌ ERROR: No context provided")
             return jsonify({'error': 'Context is required'}), 400
 
         if not api_key:
-            print("❌ ERROR: No API key provided")
-            return jsonify({'error': 'API key is required'}), 400
+            print("❌ ERROR: No API key available")
+            return jsonify({'error': 'API key is required. Please contact the administrator.'}), 400
 
-        # Check rate limit
+        # Check rate limit (use a generic identifier for server key)
+        rate_limit_key = 'SERVER_KEY' if server_api_key else api_key
         print("🔍 Checking rate limit...")
-        is_allowed, error_msg = check_rate_limit(api_key)
+        is_allowed, error_msg = check_rate_limit(rate_limit_key)
         if not is_allowed:
             print(f"❌ Rate limit exceeded: {error_msg}")
             return jsonify({'error': error_msg}), 429
@@ -368,16 +382,25 @@ def analyze_image():
             print("❌ ERROR: Empty filename")
             return jsonify({'error': 'No file selected'}), 400
 
-        api_key = request.form.get('api_key', '')
+        user_api_key = request.form.get('api_key', '')
+
+        # Use server API key if available, otherwise fall back to user-provided key
+        server_api_key = os.environ.get('OPENAI_API_KEY', '')
+        api_key = server_api_key if server_api_key else user_api_key
+
         if not api_key:
-            print("❌ ERROR: No API key provided")
-            return jsonify({'error': 'API key is required'}), 400
+            print("❌ ERROR: No API key available")
+            return jsonify({'error': 'API key is required. Please contact the administrator.'}), 400
 
-        print(f"🔑 API key received (length: {len(api_key)})")
+        if server_api_key:
+            print(f"🔑 Using server API key")
+        else:
+            print(f"🔑 Using user-provided API key (length: {len(api_key)})")
 
-        # Check rate limit
+        # Check rate limit (use a generic identifier for server key)
+        rate_limit_key = 'SERVER_KEY' if server_api_key else api_key
         print("🔍 Checking rate limit...")
-        is_allowed, error_msg = check_rate_limit(api_key)
+        is_allowed, error_msg = check_rate_limit(rate_limit_key)
         if not is_allowed:
             print(f"❌ Rate limit exceeded: {error_msg}")
             return jsonify({'error': error_msg}), 400

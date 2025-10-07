@@ -856,7 +856,7 @@
             <div style="background: linear-gradient(135deg, #f0f4ff 0%, #e8edff 100%); border: 1px solid #5465ff; border-radius: var(--radius-sm); padding: 16px; margin-bottom: 20px;">
                 <h3 style="font-size: 16px; font-weight: 700; color: var(--text-strong); margin-bottom: 8px;">About This App</h3>
                 <p style="font-size: 14px; color: var(--text-strong); line-height: 1.6; margin: 0;">
-                    This is a demo of an AI-assisted AAC software designed to be an assistive technology for nonverbal communicators. Currently, AAC softwares provide ~50 words at a time, unchanging by context and are woefully inadequate for communication. There are hundreds of reasons a person may be nonverbal, and almost none of them involve an impairment in language comprehension, or uses that aren't in speech. With this software, context dependant suggestions make picking words easier, and the "generate sentences" button allows you to choose which version of the many nuanced ways that words can be combined you wish to say. There's also a button to send a photo, which will generate ~100 context-relevant vocabulary words that might help where you are! It currently requires an OpenAI key, and OpenAI will charge you for usage. I ended up using about 2 cents worth of credit in an hour of testing. This can be made far more efficient in the future.
+                    This is a demo of an AI-assisted AAC software designed to be an assistive technology for nonverbal communicators. Currently, AAC softwares provide ~50 words at a time, unchanging by context and are woefully inadequate for communication. There are hundreds of reasons a person may be nonverbal, and almost none of them involve an impairment in language comprehension, or uses that aren't in speech. With this software, context dependant suggestions make picking words easier, and the "generate sentences" button allows you to choose which version of the many nuanced ways that words can be combined you wish to say. There's also a button to send a photo, which will generate ~100 context-relevant vocabulary words that might help where you are! This demo is free to use - no API key required!
                 </p>
             </div>
 
@@ -1381,11 +1381,33 @@
             httpsWarning.style.display = 'block';
         }
 
-        // Check if API key and voice are already set
-        const hasVoice = localStorage.getItem('tts_voice');
-        if (apiKey && hasVoice) {
-            setupModal.style.display = 'none';
-        }
+        // Check if server has API key configured
+        let hasServerKey = false;
+        fetch(buildUrl('/api/check-server-key'))
+            .then(res => res.json())
+            .then(data => {
+                hasServerKey = data.hasServerKey;
+
+                // Hide setup modal if server has key and voice is set, or if user has both
+                const hasVoice = localStorage.getItem('tts_voice');
+                if ((hasServerKey && hasVoice) || (apiKey && hasVoice)) {
+                    setupModal.style.display = 'none';
+                }
+
+                // Update modal text if server has key
+                if (hasServerKey) {
+                    document.querySelector('#setupModal p').textContent =
+                        'To get started, please select a voice. (API key is provided by the server)';
+                }
+            })
+            .catch(err => {
+                console.error('Failed to check server key:', err);
+                // Fallback to original behavior
+                const hasVoice = localStorage.getItem('tts_voice');
+                if (apiKey && hasVoice) {
+                    setupModal.style.display = 'none';
+                }
+            });
 
         // Check if user previously selected session-only mode
         const useSessionOnly = localStorage.getItem('use_session_only') === 'true';
@@ -1413,13 +1435,17 @@
 
         saveSetupBtn.addEventListener('click', () => {
             const key = apiKeyInput.value.trim();
-            if (!key) {
-                alert('Please enter a valid API key');
-                return;
-            }
-            if (!key.startsWith('sk-')) {
-                alert('Invalid API key format. OpenAI keys start with "sk-"');
-                return;
+
+            // Only require API key if server doesn't have one
+            if (!hasServerKey) {
+                if (!key) {
+                    alert('Please enter a valid API key');
+                    return;
+                }
+                if (!key.startsWith('sk-')) {
+                    alert('Invalid API key format. OpenAI keys start with "sk-"');
+                    return;
+                }
             }
 
             const voiceSelectModal = document.getElementById('voiceSelectModal');
@@ -1429,17 +1455,19 @@
                 return;
             }
 
-            apiKey = key;
+            if (key) {
+                apiKey = key;
 
-            // Store API key based on user preference
-            if (sessionOnlyCheckbox.checked) {
-                sessionStorage.setItem('openai_api_key', key);
-                localStorage.setItem('use_session_only', 'true');
-                localStorage.removeItem('openai_api_key');
-            } else {
-                localStorage.setItem('openai_api_key', key);
-                localStorage.setItem('use_session_only', 'false');
-                sessionStorage.removeItem('openai_api_key');
+                // Store API key based on user preference
+                if (sessionOnlyCheckbox.checked) {
+                    sessionStorage.setItem('openai_api_key', key);
+                    localStorage.setItem('use_session_only', 'true');
+                    localStorage.removeItem('openai_api_key');
+                } else {
+                    localStorage.setItem('openai_api_key', key);
+                    localStorage.setItem('use_session_only', 'false');
+                    sessionStorage.removeItem('openai_api_key');
+                }
             }
 
             // Store voice selection
@@ -1597,7 +1625,7 @@
             console.log('📄 Type:', file.type);
             console.log('⏰ Started at:', new Date().toLocaleTimeString());
 
-            if (!apiKey) {
+            if (!hasServerKey && !apiKey) {
                 console.error('❌ No API key available');
                 alert('Please enter your API key first');
                 setupModal.style.display = 'flex';
@@ -1678,7 +1706,7 @@
                 return;
             }
 
-            if (!apiKey) {
+            if (!hasServerKey && !apiKey) {
                 console.error('❌ No API key provided');
                 alert('Please enter your API key first');
                 setupModal.style.display = 'flex';
