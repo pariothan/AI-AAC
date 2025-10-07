@@ -847,12 +847,12 @@
     </style>
 </head>
 <body>
-    <!-- Setup Modal (API Key + Voice) -->
+    <!-- Welcome Modal (Voice Selection) -->
     <div id="setupModal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.7); display: flex; align-items: center; justify-content: center; z-index: 2000;">
         <div style="background: var(--surface); border-radius: var(--radius-md); padding: 32px; max-width: 500px; width: 90%; max-height: 85vh; overflow-y: auto; border: 1px solid var(--border); box-shadow: var(--shadow-lg);">
             <h2 style="margin-bottom: 16px; font-size: 24px;">Welcome to AI-AAC! 💬</h2>
 
-            <!-- App Description - EDIT THIS SECTION -->
+            <!-- App Description -->
             <div style="background: linear-gradient(135deg, #f0f4ff 0%, #e8edff 100%); border: 1px solid #5465ff; border-radius: var(--radius-sm); padding: 16px; margin-bottom: 20px;">
                 <h3 style="font-size: 16px; font-weight: 700; color: var(--text-strong); margin-bottom: 8px;">About This App</h3>
                 <p style="font-size: 14px; color: var(--text-strong); line-height: 1.6; margin: 0;">
@@ -860,42 +860,9 @@
                 </p>
             </div>
 
-            <!-- HTTPS Warning -->
-            <div id="httpsWarning" style="display: none; background: #fff4e6; border: 1px solid #ff9800; border-radius: var(--radius-sm); padding: 12px; margin-bottom: 16px;">
-                <div style="display: flex; gap: 8px; align-items: start;">
-                    <span style="font-size: 18px;">⚠️</span>
-                    <div style="font-size: 13px; color: #e65100;">
-                        <strong>Security Warning:</strong> You're not using HTTPS. Your API key may be visible to attackers. Only use this on trusted networks.
-                    </div>
-                </div>
-            </div>
-
             <p style="margin-bottom: 16px; color: var(--text-muted); line-height: 1.6; font-size: 14px;">
-                To get started, please enter your OpenAI API key and select a voice.
+                To get started, please select a voice for text-to-speech.
             </p>
-
-            <!-- Security notice -->
-            <div style="background: #f0f4ff; border: 1px solid #5465ff; border-radius: var(--radius-sm); padding: 12px; margin-bottom: 16px;">
-                <div style="font-size: 13px; color: var(--text-strong); line-height: 1.5;">
-                    <strong>🔒 Security Notice:</strong><br>
-                    • Your key is stored in your browser only<br>
-                    • Never share your API key with others<br>
-                    • Monitor your OpenAI usage regularly<br>
-                    • This app sends requests through our server
-                </div>
-            </div>
-
-            <input
-                type="password"
-                id="apiKeyInput"
-                placeholder="sk-..."
-                style="width: 100%; padding: 12px 16px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface-strong); font-size: 15px; margin-bottom: 12px;"
-            />
-
-            <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px; font-size: 14px; cursor: pointer;">
-                <input type="checkbox" id="sessionOnlyCheckbox" style="cursor: pointer;">
-                <span>Session only (clear key when browser closes)</span>
-            </label>
 
             <!-- Voice Selection -->
             <div style="margin-bottom: 16px;">
@@ -909,11 +876,8 @@
             </div>
 
             <div style="display: flex; gap: 12px;">
-                <button id="saveSetupBtn" class="btn btn-primary" style="flex: 1;">Save & Continue</button>
+                <button id="saveSetupBtn" class="btn btn-primary" style="flex: 1;">Continue</button>
             </div>
-            <p style="margin-top: 16px; font-size: 13px; color: var(--text-muted);">
-                Don't have an API key? <a href="https://platform.openai.com/api-keys" target="_blank" style="color: var(--primary); text-decoration: underline;">Get one from OpenAI</a>
-            </p>
         </div>
     </div>
 
@@ -945,7 +909,7 @@
                         <div style="display: flex; gap: 8px;">
                             <input type="file" id="imageInput" accept="image/*" style="display: none;">
                             <button class="focus-btn" id="attachImageBtn" title="Attach Image" style="font-size: 18px;">📷</button>
-                            <button class="focus-btn" id="changeApiKeyBtn" title="Change API Key" style="font-size: 14px;">🔑</button>
+                            <button class="focus-btn" id="changeVoiceBtn" title="Change Voice" style="font-size: 14px;">🔊</button>
                             <button class="focus-btn" id="focusWordsBtn">⇄</button>
                         </div>
                     </div>
@@ -1368,18 +1332,10 @@
         // Setup Modal (API Key + Voice) Management
         let apiKey = localStorage.getItem('openai_api_key') || sessionStorage.getItem('openai_api_key') || '';
         const setupModal = document.getElementById('setupModal');
-        const apiKeyInput = document.getElementById('apiKeyInput');
         const saveSetupBtn = document.getElementById('saveSetupBtn');
         const testVoiceBtn = document.getElementById('testVoiceBtn');
-        const changeApiKeyBtn = document.getElementById('changeApiKeyBtn');
-        const sessionOnlyCheckbox = document.getElementById('sessionOnlyCheckbox');
-        const httpsWarning = document.getElementById('httpsWarning');
+        const changeVoiceBtn = document.getElementById('changeVoiceBtn');
         const voiceSelectModal = document.getElementById('voiceSelectModal');
-
-        // Check if using HTTPS
-        if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
-            httpsWarning.style.display = 'block';
-        }
 
         // Check if server has API key configured
         let hasServerKey = false;
@@ -1388,32 +1344,20 @@
             .then(data => {
                 hasServerKey = data.hasServerKey;
 
-                // Hide setup modal if server has key and voice is set, or if user has both
+                // Hide setup modal if voice is already set
                 const hasVoice = localStorage.getItem('tts_voice');
-                if ((hasServerKey && hasVoice) || (apiKey && hasVoice)) {
+                if (hasVoice) {
                     setupModal.style.display = 'none';
-                }
-
-                // Update modal text if server has key
-                if (hasServerKey) {
-                    document.querySelector('#setupModal p').textContent =
-                        'To get started, please select a voice. (API key is provided by the server)';
                 }
             })
             .catch(err => {
                 console.error('Failed to check server key:', err);
-                // Fallback to original behavior
+                // Fallback: hide modal if voice is set
                 const hasVoice = localStorage.getItem('tts_voice');
-                if (apiKey && hasVoice) {
+                if (hasVoice) {
                     setupModal.style.display = 'none';
                 }
             });
-
-        // Check if user previously selected session-only mode
-        const useSessionOnly = localStorage.getItem('use_session_only') === 'true';
-        if (useSessionOnly) {
-            sessionOnlyCheckbox.checked = true;
-        }
 
         // Test voice button
         testVoiceBtn.addEventListener('click', () => {
@@ -1434,40 +1378,11 @@
         });
 
         saveSetupBtn.addEventListener('click', () => {
-            const key = apiKeyInput.value.trim();
-
-            // Only require API key if server doesn't have one
-            if (!hasServerKey) {
-                if (!key) {
-                    alert('Please enter a valid API key');
-                    return;
-                }
-                if (!key.startsWith('sk-')) {
-                    alert('Invalid API key format. OpenAI keys start with "sk-"');
-                    return;
-                }
-            }
-
             const voiceSelectModal = document.getElementById('voiceSelectModal');
             const voiceName = voiceSelectModal ? voiceSelectModal.value : '';
             if (!voiceName) {
                 alert('Please select a voice for text-to-speech');
                 return;
-            }
-
-            if (key) {
-                apiKey = key;
-
-                // Store API key based on user preference
-                if (sessionOnlyCheckbox.checked) {
-                    sessionStorage.setItem('openai_api_key', key);
-                    localStorage.setItem('use_session_only', 'true');
-                    localStorage.removeItem('openai_api_key');
-                } else {
-                    localStorage.setItem('openai_api_key', key);
-                    localStorage.setItem('use_session_only', 'false');
-                    sessionStorage.removeItem('openai_api_key');
-                }
             }
 
             // Store voice selection
@@ -1478,19 +1393,10 @@
             updateVoiceButtonText(voiceName);
 
             setupModal.style.display = 'none';
-            apiKeyInput.value = '';
         });
 
-        changeApiKeyBtn.addEventListener('click', () => {
+        changeVoiceBtn.addEventListener('click', () => {
             setupModal.style.display = 'flex';
-            apiKeyInput.value = '';
-            apiKeyInput.focus();
-        });
-
-        apiKeyInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                saveSetupBtn.click();
-            }
         });
 
         // Main app logic
