@@ -235,29 +235,32 @@ def generate_sentences():
         clean_words = [word.split(' ', 1)[-1] if ' ' in word else word for word in words]
         words_str = ", ".join(clean_words)
 
-        prompt = f"""Create 15-20 different short, simple sentences using ONLY these words: {words_str}
+        prompt = f"""Create 15-20 different short, simple sentences using these words: {words_str}
 
 CRITICAL RULES:
-- Use ONLY the words provided - preserve the user's exact words and intended meaning
-- KEEP THE INTENDED CONTENT AS INTACT AS POSSIBLE - the user chose these specific words for a reason
-- You may ONLY add function words (the, a, an, is, are, was, were, to, at, in, on, with, while, etc.)
-- You may use clear synonyms for function words if they clarify meaning (during→while, have→possess)
+- Use the words provided - preserve the user's intended meaning
+- KEEP THE CORE MESSAGE INTACT - the user chose these words to express something specific
+- You may add function words (the, a, an, is, are, was, were, to, at, in, on, with, while, etc.)
 - You may conjugate verbs as necessary (add -s, -ed, -ing)
 - You may add plural markers (-s, -es)
 - You may change pronoun case (I/me, he/him, she/her, they/them, etc.)
-- You may add helping verbs for clarity (want→want to have, need→need to get)
-- Keep words in their original order whenever possible - only reorder when absolutely necessary for grammar
-- DO NOT substitute the user's content words - only enhance with function words and grammatical elements
+- You may CHANGE PARTS OF SPEECH to make sentences grammatical (noun→verb, adjective→adverb, etc.)
+  * "bad" (adjective) → "badly" (adverb): "I bad want food" → "I badly want food"
+  * "quick" (adjective) → "quickly" (adverb): "I quick run" → "I quickly run"
+  * "happy" (adjective) → "happily" (adverb): "I happy dance" → "I happily dance"
+  * "love" (noun) → "love" (verb): "I love food" (noun) → "I love food" (verb)
+- You may add helping verbs for clarity (want→want to, need→need to)
+- You may add derivational suffixes to change word forms (-ly, -ness, -tion, -er, etc.)
+- Keep words in their original order when possible - only reorder for grammar/clarity
 - Make the sentences grammatically correct and natural
 - Be simple and clear
-- Preserve the original word sequence and intended meaning as much as possible
-- Show different ways to express ideas while maintaining the core words and meaning
-- Create variety through: adding function words, changing verb tenses, statements vs questions, different perspectives
+- Show different ways to express ideas while maintaining the core meaning
 
-Examples of acceptable flexibility:
-- "I want go" → "I want to go" / "Do I want to go?" / "I wanted to go"
-- "I want food during learn new" → "I want to have food while learning new things" / "I want food during learning new things"
-- "I feel happy" → "I feel happy" / "I am feeling happy" / "Do I feel happy?"
+Examples showing part-of-speech flexibility:
+- "I bad want food" → "I badly want food" / "I want food badly" / "I really want food"
+- "I happy see friend" → "I happily see my friend" / "I'm happy to see my friend"
+- "I quick need help" → "I quickly need help" / "I need help quickly" / "I urgently need help"
+- "I feel bad" → "I feel bad" / "I feel badly" / "I'm feeling bad"
 
 Return ONLY the sentences, one per line. No numbering, no extra text."""
 

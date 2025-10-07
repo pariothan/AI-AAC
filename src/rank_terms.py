@@ -136,35 +136,40 @@ def generate_candidate_terms(client: OpenAI, context: str, n: int = 500) -> List
     print(f"   🤖 Calling GPT-4o-mini API...")
     prompt = f"""Given this context: "{context}"
 
-Generate {n} BASIC, HIGH-FREQUENCY WORDS for someone learning to communicate using AAC (Augmentative and Alternative Communication).
+Generate {n} BASIC, SINGLE-WORD VOCABULARY for AAC (Augmentative and Alternative Communication).
 
-Focus on CORE VOCABULARY - the most essential, frequently-used words that apply across many situations:
+ABSOLUTE PRIORITY - NOUNS and VERBS:
+Generate primarily CONCRETE NOUNS and ACTION VERBS. These are the building blocks of communication.
 
-PRIORITY 1 - Core Communication Words (MOST IMPORTANT):
-- Basic needs: want, need, help, more, stop, go, yes, no, please, thank you
-- Basic verbs: eat, drink, sleep, sit, stand, walk, run, play, like, see, hear, feel
-- Basic nouns: person, mom, dad, friend, food, water, home, bed, chair, door, window
-- Basic descriptors: good, bad, happy, sad, big, small, hot, cold, now, later
-- Basic questions: what, where, when, who, why, how
+NOUNS (things, people, places):
+- People: person, mom, dad, friend, baby, child, family, teacher, doctor
+- Body: hand, foot, head, eye, ear, mouth, nose, arm, leg, body
+- Food/Drink: food, water, milk, juice, bread, egg, meat, fruit, snack, drink
+- Places: home, room, bed, door, window, table, chair, bathroom, kitchen, school
+- Objects: toy, book, ball, cup, plate, spoon, phone, car, bus, bike
 
-PRIORITY 2 - Context-Relevant Words:
-Then add words specific to this context, but keep them SIMPLE and GENERAL:
-- For BOATING: boat, water, swim, friend, fun, trip, go, sun, wave
-- For CLASSROOM: teacher, learn, book, read, write, desk, help, question
-- For HOME: cook, eat, sleep, family, room, clean, relax, comfortable
-- For PARK: play, swing, slide, run, fun, tree, grass, friend
-- For STORE: buy, want, pay, look, need, cart, food, item
+VERBS (actions, states):
+- Basic actions: go, stop, come, get, give, take, put, open, close, push, pull
+- Physical: walk, run, sit, stand, jump, fall, sleep, wake, eat, drink
+- Communication: say, ask, tell, call, talk, listen, look, see, hear, feel
+- Needs: want, need, have, like, help, hurt, sick, tired, hungry, thirsty
 
-Rules:
-1. SINGLE words only (simple compound terms like "bathroom" are OK)
-2. Use HIGH-FREQUENCY words that appear in everyday communication
-3. Focus on words a child or non-verbal person would need most
-4. Prioritize ACTION words (verbs) and NEED words over descriptive/technical terms
-5. Include emotional/social words: happy, sad, angry, love, friend, sorry, thank you
-6. NO complex/technical vocabulary unless absolutely essential for context
+After covering nouns and verbs thoroughly, then add:
+- Essential descriptors: good, bad, big, small, hot, cold, happy, sad, more, all
+- Essential function words: yes, no, please, thank, you, me, my, here, there, now
+
+Context-specific words should ALSO be primarily nouns and verbs related to the situation.
+
+CRITICAL RULES:
+1. SINGLE words ONLY - no phrases, no multi-word terms
+2. Prioritize CONCRETE nouns (things you can point to) over abstract concepts
+3. Prioritize ACTION verbs (things you can do/see) over state-of-being verbs
+4. Use SIMPLE, HIGH-FREQUENCY words a young child would know
+5. NO adjectives/adverbs unless they are essential (hot, cold, more, all)
+6. NO technical, complex, or academic vocabulary
 7. NO proper nouns or brand names
 
-Output ONLY single words, comma-separated, starting with the most essential communication words first."""
+Output ONLY single words, comma-separated, starting with the most essential nouns and verbs first."""
 
     try:
         response = client.chat.completions.create(
