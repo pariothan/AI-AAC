@@ -27,6 +27,7 @@ else:
 rate_limit_store = defaultdict(list)
 RATE_LIMIT_REQUESTS = 20  # Max requests per window
 RATE_LIMIT_WINDOW = 300  # 5 minutes in seconds
+RATE_LIMIT_ENABLED = False  # Disabled per request; set True to restore limiting
 
 def get_openai_client(api_key: str):
     """Create OpenAI client with provided API key"""
@@ -39,6 +40,9 @@ def check_rate_limit(api_key: str) -> Tuple[bool, str]:
     Check if request is within rate limits.
     Returns (is_allowed, error_message)
     """
+    if not RATE_LIMIT_ENABLED:
+        return True, ""
+
     # Hash the API key for privacy (don't store actual keys)
     key_hash = hashlib.sha256(api_key.encode()).hexdigest()[:16]
 
