@@ -334,7 +334,7 @@ CRITICAL RULES:
 - Focus on HIGH-FREQUENCY AAC vocabulary (basic verbs, nouns, function words)
 - Consider natural grammar and conversational flow
 - Prioritize words that help express needs, feelings, and actions
-- Include a mix of: verbs, nouns, adjectives, and function words (to, the, a, etc.)
+- Include a mix of: verbs, nouns, and adjectives, but do NOT use function words (to, a, the)
 - Keep words SIMPLE and commonly used in everyday communication
 - NO complex or technical words
 - NO proper nouns
@@ -342,7 +342,7 @@ CRITICAL RULES:
 Return ONLY the 15 words as a comma-separated list, nothing else.
 
 Example input: "I want"
-Example output: to, go, help, food, water, more, see, play, eat, sleep, this, that, you, my, some"""
+Example output: drink, go, help, food, water, more, see, play, eat, sleep, see, break, you, my, some"""
 
         response = openai_client.chat.completions.create(
             model="gpt-4o-mini",  # Faster and cheaper
