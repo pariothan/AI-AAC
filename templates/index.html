@@ -962,7 +962,7 @@
         }
 
         /* Tablet and mobile */
-        @media (max-width: 1200px) {
+        @media (max-width: 1023px) {
             body {
                 height: auto;
                 min-height: 100vh;
@@ -983,6 +983,32 @@
             .canvas-area {
                 flex-direction: column;
                 min-height: auto;
+            }
+
+            .workspace-suggestions-wrapper {
+                width: 100%;
+                min-width: 100%;
+            }
+
+            .workspace-column,
+            .suggestions-panel {
+                width: 100%;
+            }
+
+            .suggestions-panel {
+                flex: 1 1 auto;
+                height: auto;
+                min-height: auto;
+            }
+
+            .suggestions-list {
+                flex-wrap: wrap;
+                overflow-x: hidden;
+                overflow-y: auto;
+            }
+
+            .workspace {
+                min-height: 220px;
             }
 
             .sidebar,
@@ -1227,6 +1253,7 @@
         // Touch device detection
         const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
         const isIPad = /iPad|Macintosh/.test(navigator.userAgent) && 'ontouchend' in document;
+        const TOUCH_DRAG_THRESHOLD = 12; // px movement before we treat touch as a drag
 
         // Text-to-Speech functionality
         let selectedVoice = null;
@@ -1965,7 +1992,8 @@
             currentY: 0,
             ghost: null,
             sourceType: null, // 'bank', 'canvas', 'suggestion'
-            isReordering: false
+            isReordering: false,
+            hasExceededThreshold: false
         };
 
         function createTouchGhost(element, x, y) {
@@ -2020,6 +2048,7 @@
             touchDragState.currentY = touch.clientY;
             touchDragState.sourceType = sourceType;
             touchDragState.isReordering = (sourceType === 'canvas');
+            touchDragState.hasExceededThreshold = false;
 
             // Add touching class for visual feedback
             element.classList.add('touching');
@@ -2034,8 +2063,6 @@
         function handleTouchMove(e) {
             if (!touchDragState.active) return;
 
-            e.preventDefault(); // Prevent scrolling while dragging
-
             const touch = e.touches[0];
             touchDragState.currentX = touch.clientX;
             touchDragState.currentY = touch.clientY;
@@ -2045,9 +2072,21 @@
             const deltaY = Math.abs(touch.clientY - touchDragState.startY);
             const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
-            // Create ghost after moving 10px (prevents accidental drags)
-            if (!touchDragState.ghost && distance > 10) {
-                const rect = touchDragState.element.getBoundingClientRect();
+            if (!touchDragState.hasExceededThreshold && distance > TOUCH_DRAG_THRESHOLD) {
+                touchDragState.hasExceededThreshold = true;
+            }
+
+            // Allow natural scrolling until we are sure this is a drag
+            if (!touchDragState.hasExceededThreshold) {
+                return;
+            }
+
+            e.preventDefault(); // Prevent scrolling once dragging begins
+
+            const rect = touchDragState.element.getBoundingClientRect();
+
+            // Create ghost element on first real drag movement
+            if (!touchDragState.ghost) {
                 touchDragState.ghost = createTouchGhost(
                     touchDragState.element,
                     touch.clientX - rect.width / 2,
@@ -2056,35 +2095,30 @@
                 workspace.classList.add('dragover');
             }
 
-            // Update ghost position
-            if (touchDragState.ghost) {
-                const rect = touchDragState.element.getBoundingClientRect();
-                updateTouchGhostPosition(
-                    touch.clientX - rect.width / 2,
-                    touch.clientY - rect.height / 2
-                );
+            updateTouchGhostPosition(
+                touch.clientX - rect.width / 2,
+                touch.clientY - rect.height / 2
+            );
 
-                // Handle reordering in workspace
-                if (touchDragState.isReordering) {
-                    const afterElement = getDragAfterElement(workspace, touch.clientX, touch.clientY);
-                    if (afterElement == null) {
-                        workspace.appendChild(touchDragState.element);
-                    } else {
-                        workspace.insertBefore(touchDragState.element, afterElement);
-                    }
+            if (touchDragState.isReordering) {
+                const afterElement = getDragAfterElement(workspace, touch.clientX, touch.clientY);
+                if (afterElement == null) {
+                    workspace.appendChild(touchDragState.element);
                 } else {
-                    // Show insertion marker for new items
-                    if (!insertionMarker) {
-                        insertionMarker = document.createElement('div');
-                        insertionMarker.className = 'insertion-marker';
-                    }
+                    workspace.insertBefore(touchDragState.element, afterElement);
+                }
+            } else {
+                // Show insertion marker for new items
+                if (!insertionMarker) {
+                    insertionMarker = document.createElement('div');
+                    insertionMarker.className = 'insertion-marker';
+                }
 
-                    const afterElement = getDragAfterElement(workspace, touch.clientX, touch.clientY);
-                    if (afterElement == null) {
-                        workspace.appendChild(insertionMarker);
-                    } else {
-                        workspace.insertBefore(insertionMarker, afterElement);
-                    }
+                const afterElement = getDragAfterElement(workspace, touch.clientX, touch.clientY);
+                if (afterElement == null) {
+                    workspace.appendChild(insertionMarker);
+                } else {
+                    workspace.insertBefore(insertionMarker, afterElement);
                 }
             }
         }
@@ -2140,6 +2174,7 @@
             touchDragState.term = null;
             touchDragState.ghost = null;
             touchDragState.isReordering = false;
+            touchDragState.hasExceededThreshold = false;
         }
 
         function handleTouchCancel(e) {
@@ -2159,6 +2194,7 @@
             touchDragState.term = null;
             touchDragState.ghost = null;
             touchDragState.isReordering = false;
+            touchDragState.hasExceededThreshold = false;
         }
 
         // Add global touch event listeners
