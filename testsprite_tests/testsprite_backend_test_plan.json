@@ -1,0 +1,32 @@
+[
+  {
+    "id": "TC001",
+    "title": "generate vocabulary from context",
+    "description": "Test the /generate endpoint to ensure it generates approximately 100 relevant vocabulary words with emoji prefixes based on the provided text context. Verify correct handling of valid context input, optional API key usage, and appropriate error responses for missing context or API key, rate limiting, and server errors."
+  },
+  {
+    "id": "TC002",
+    "title": "generate sentences from words",
+    "description": "Test the /generate-sentences endpoint to verify it produces 15 to 20 short, simple example sentences using the provided array of vocabulary words. Confirm correct response structure, handling of missing words or API key, rate limiting enforcement, and server error responses."
+  },
+  {
+    "id": "TC003",
+    "title": "suggest next words for aac communication",
+    "description": "Test the /suggest-next-words endpoint to ensure it returns 15 likely next word suggestions with emoji prefixes based on the current sequence of words or core vocabulary if no words are provided. Validate correct handling of missing API key, rate limiting, and server errors."
+  },
+  {
+    "id": "TC004",
+    "title": "analyze image and generate description",
+    "description": "Test the /analyze-image endpoint by uploading various image files to verify proper image processing (resizing, JPEG conversion) and generation of a 2-3 sentence descriptive text suitable for vocabulary extraction. Check for correct handling of missing image file, empty filename, missing API key, rate limiting, and server errors."
+  },
+  {
+    "id": "TC005",
+    "title": "get main web interface",
+    "description": "Test the root / endpoint to confirm the main web interface HTML page loads correctly and is responsive on desktop browsers."
+  },
+  {
+    "id": "TC006",
+    "title": "check if server has api key",
+    "description": "Test the /api/check-server-key endpoint to verify it correctly returns whether the server has an OpenAI API key configured in environment variables."
+  }
+]

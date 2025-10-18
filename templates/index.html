@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <title>AI-AAC</title>
     <script>
         window.APP_CONFIG = {
@@ -38,12 +40,16 @@
             background: linear-gradient(180deg, #e8efff 0%, #f9fbff 100%);
             color: var(--text-strong);
             height: 100vh;
+            height: 100dvh; /* Dynamic viewport height for iOS Safari */
             margin: 0;
             display: flex;
             justify-content: center;
             align-items: stretch;
             padding: 16px;
             overflow: hidden;
+            -webkit-overflow-scrolling: touch;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: pan-y;
         }
 
         h1, h2, h3 {
@@ -113,8 +119,10 @@
         }
 
         .focus-btn {
-            width: 40px;
-            height: 40px;
+            min-width: 44px;
+            min-height: 44px;
+            width: 44px;
+            height: 44px;
             background: var(--surface-strong);
             border: 1px solid var(--border-strong);
             border-radius: 12px;
@@ -128,6 +136,9 @@
             justify-content: center;
             padding: 0;
             transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            -webkit-user-select: none;
         }
 
         .focus-btn:hover {
@@ -312,16 +323,22 @@
 
         .bank-term {
             background: var(--surface-muted);
-            padding: 9px 12px;
+            padding: 12px 16px;
+            min-height: 44px;
             border-radius: var(--radius-sm);
             cursor: pointer;
             border: 1px solid transparent;
             user-select: none;
+            -webkit-user-select: none;
             font-size: 15px;
             font-weight: 500;
             transition: transform 0.2s ease, box-shadow 0.2s ease, border 0.2s ease, background 0.2s ease;
             white-space: nowrap;
             box-shadow: 0 8px 18px rgba(84, 101, 255, 0.12);
+            -webkit-tap-highlight-color: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .bank-term:hover {
@@ -331,9 +348,11 @@
             box-shadow: 0 16px 30px rgba(84, 101, 255, 0.18);
         }
 
-        .bank-term:active {
+        .bank-term:active, .bank-term.touching {
             cursor: grabbing;
             transform: scale(0.98);
+            background: rgba(84, 101, 255, 0.25);
+            box-shadow: 0 4px 12px rgba(84, 101, 255, 0.2);
         }
 
         .term-count {
@@ -419,17 +438,23 @@
         .canvas-term {
             position: relative;
             background: #eef0ff;
-            padding: 10px 16px;
+            padding: 12px 20px;
+            min-height: 48px;
             border-radius: 18px;
             box-shadow: 0 12px 20px rgba(84, 101, 255, 0.18);
             cursor: pointer;
             user-select: none;
+            -webkit-user-select: none;
             font-size: 16px;
             font-weight: 600;
             transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
             border: 1px solid rgba(84, 101, 255, 0.35);
             flex-shrink: 0;
             color: #363dcc;
+            -webkit-tap-highlight-color: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .canvas-term:hover {
@@ -450,9 +475,10 @@
             box-shadow: 0 4px 12px rgba(84, 101, 255, 0.3);
         }
 
-        .canvas-term:active {
+        .canvas-term:active, .canvas-term.touching {
             cursor: grabbing;
             transform: scale(0.98);
+            background: #c7d1ff;
         }
 
         .canvas-term.dragging {
@@ -461,25 +487,97 @@
 
         .canvas-term .remove-btn {
             position: absolute;
-            top: -8px;
-            right: -8px;
-            width: 20px;
-            height: 20px;
+            top: -10px;
+            right: -10px;
+            min-width: 32px;
+            min-height: 32px;
+            width: 32px;
+            height: 32px;
             background: #ff5d72;
-            border: 2px solid white;
+            border: 3px solid white;
             border-radius: 50%;
             color: white;
-            font-size: 12px;
+            font-size: 16px;
+            font-weight: 700;
             cursor: pointer;
             display: none;
             align-items: center;
             justify-content: center;
             line-height: 1;
             box-shadow: 0 10px 18px rgba(255, 93, 114, 0.3);
+            z-index: 10;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        .canvas-term:hover .remove-btn {
+        .canvas-term:hover .remove-btn,
+        .canvas-term.show-remove .remove-btn {
             display: flex;
+        }
+
+        /* Touch devices: always show remove button for better UX */
+        @media (hover: none) and (pointer: coarse) {
+            .canvas-term .remove-btn {
+                display: flex;
+                opacity: 0.9;
+            }
+        }
+
+        /* Touch drag ghost element styling */
+        .dragging-ghost {
+            pointer-events: none;
+            filter: drop-shadow(0 20px 40px rgba(84, 101, 255, 0.35));
+        }
+
+        /* Prevent text selection during touch drag */
+        body.touching {
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
+
+        /* Smooth scrolling for iOS */
+        .word-bank,
+        .sentences-list,
+        .suggestions-list {
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+        }
+
+        /* Touch-friendly improvements for all touch devices */
+        @media (hover: none) and (pointer: coarse) {
+            /* Increase button sizes for touch */
+            .btn {
+                min-height: 48px;
+                padding: 14px 22px;
+                font-size: 16px;
+            }
+
+            /* Make category headers easier to tap */
+            .category-header {
+                padding: 14px 16px;
+                font-size: 16px;
+            }
+
+            /* Increase tap area for sentence items */
+            .sentence-item {
+                padding: 16px 20px;
+                font-size: 16px;
+            }
+
+            /* Better spacing in workspace */
+            .workspace {
+                gap: 14px;
+            }
+
+            /* Make empty state larger and more visible */
+            .empty-state {
+                font-size: 18px;
+            }
+
+            .empty-state-icon {
+                font-size: 52px;
+            }
         }
 
         .insertion-marker {
@@ -789,6 +887,81 @@
             100% { transform: scale(1); }
         }
 
+        /* iPad-specific optimizations */
+        @media (min-width: 768px) and (max-width: 834px) and (orientation: portrait) {
+            body {
+                padding: 12px;
+            }
+
+            .container {
+                padding: 14px;
+                gap: 14px;
+            }
+
+            .sidebar {
+                flex: 0 0 280px;
+            }
+
+            .sidebar.focused {
+                flex-basis: 420px;
+            }
+
+            .sentences-panel {
+                flex: 0 0 280px;
+            }
+
+            .sentences-panel.focused {
+                flex-basis: 420px;
+            }
+
+            .workspace {
+                padding: 18px;
+            }
+
+            .bank-term {
+                padding: 14px 18px;
+                font-size: 16px;
+            }
+
+            .canvas-term {
+                padding: 14px 22px;
+                font-size: 17px;
+            }
+
+            .btn {
+                padding: 14px 20px;
+                font-size: 16px;
+            }
+        }
+
+        @media (min-width: 1024px) and (max-width: 1194px) and (orientation: landscape) {
+            body {
+                padding: 14px;
+            }
+
+            .container {
+                padding: 16px;
+                gap: 16px;
+            }
+
+            .sidebar {
+                flex: 0 0 300px;
+            }
+
+            .sidebar.focused {
+                flex-basis: 460px;
+            }
+
+            .sentences-panel {
+                flex: 0 0 300px;
+            }
+
+            .sentences-panel.focused {
+                flex-basis: 460px;
+            }
+        }
+
+        /* Tablet and mobile */
         @media (max-width: 1200px) {
             body {
                 height: auto;
@@ -1050,6 +1223,10 @@
 
         const BASE_PATH = normalizeBasePath(window.APP_CONFIG?.basePath);
         const buildUrl = (endpoint) => `${BASE_PATH}${endpoint}`;
+
+        // Touch device detection
+        const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+        const isIPad = /iPad|Macintosh/.test(navigator.userAgent) && 'ontouchend' in document;
 
         // Text-to-Speech functionality
         let selectedVoice = null;
@@ -1730,9 +1907,20 @@
                         e.dataTransfer.effectAllowed = 'copy';
                     });
 
-                    card.addEventListener('click', () => {
+                    card.addEventListener('click', (e) => {
+                        // On touch devices, only add on tap if not dragging
+                        if (isTouchDevice && touchDragState.ghost) {
+                            return; // This was a drag, not a tap
+                        }
                         addToCanvas(term);
                     });
+
+                    // Add touch event handlers for drag on touch devices
+                    if (isTouchDevice) {
+                        card.addEventListener('touchstart', (e) => {
+                            handleTouchStart(e, card, term, 'bank');
+                        }, { passive: true });
+                    }
 
                     content.appendChild(card);
                 });
@@ -1765,6 +1953,220 @@
             const query = e.target.value;
             displayWordBank(query);
         });
+
+        // Touch drag and drop system
+        let touchDragState = {
+            active: false,
+            element: null,
+            term: null,
+            startX: 0,
+            startY: 0,
+            currentX: 0,
+            currentY: 0,
+            ghost: null,
+            sourceType: null, // 'bank', 'canvas', 'suggestion'
+            isReordering: false
+        };
+
+        function createTouchGhost(element, x, y) {
+            const ghost = element.cloneNode(true);
+            ghost.style.position = 'fixed';
+            ghost.style.left = x + 'px';
+            ghost.style.top = y + 'px';
+            ghost.style.pointerEvents = 'none';
+            ghost.style.zIndex = '10000';
+            ghost.style.opacity = '0.8';
+            ghost.style.transform = 'scale(1.05) rotate(3deg)';
+            ghost.style.transition = 'none';
+            ghost.classList.add('dragging-ghost');
+
+            // Remove remove button from ghost
+            const removeBtn = ghost.querySelector('.remove-btn');
+            if (removeBtn) removeBtn.remove();
+
+            document.body.appendChild(ghost);
+            return ghost;
+        }
+
+        function updateTouchGhostPosition(x, y) {
+            if (touchDragState.ghost) {
+                touchDragState.ghost.style.left = x + 'px';
+                touchDragState.ghost.style.top = y + 'px';
+            }
+        }
+
+        function removeTouchGhost() {
+            if (touchDragState.ghost) {
+                touchDragState.ghost.remove();
+                touchDragState.ghost = null;
+            }
+        }
+
+        function handleTouchStart(e, element, term, sourceType) {
+            // Prevent if already dragging
+            if (touchDragState.active) return;
+
+            // Don't start drag if tapping remove button
+            if (e.target.classList.contains('remove-btn')) return;
+
+            const touch = e.touches[0];
+
+            touchDragState.active = true;
+            touchDragState.element = element;
+            touchDragState.term = term;
+            touchDragState.startX = touch.clientX;
+            touchDragState.startY = touch.clientY;
+            touchDragState.currentX = touch.clientX;
+            touchDragState.currentY = touch.clientY;
+            touchDragState.sourceType = sourceType;
+            touchDragState.isReordering = (sourceType === 'canvas');
+
+            // Add touching class for visual feedback
+            element.classList.add('touching');
+            document.body.classList.add('touching');
+
+            // Vibrate on supported devices
+            if (navigator.vibrate) {
+                navigator.vibrate(10);
+            }
+        }
+
+        function handleTouchMove(e) {
+            if (!touchDragState.active) return;
+
+            e.preventDefault(); // Prevent scrolling while dragging
+
+            const touch = e.touches[0];
+            touchDragState.currentX = touch.clientX;
+            touchDragState.currentY = touch.clientY;
+
+            // Calculate distance moved
+            const deltaX = Math.abs(touch.clientX - touchDragState.startX);
+            const deltaY = Math.abs(touch.clientY - touchDragState.startY);
+            const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+            // Create ghost after moving 10px (prevents accidental drags)
+            if (!touchDragState.ghost && distance > 10) {
+                const rect = touchDragState.element.getBoundingClientRect();
+                touchDragState.ghost = createTouchGhost(
+                    touchDragState.element,
+                    touch.clientX - rect.width / 2,
+                    touch.clientY - rect.height / 2
+                );
+                workspace.classList.add('dragover');
+            }
+
+            // Update ghost position
+            if (touchDragState.ghost) {
+                const rect = touchDragState.element.getBoundingClientRect();
+                updateTouchGhostPosition(
+                    touch.clientX - rect.width / 2,
+                    touch.clientY - rect.height / 2
+                );
+
+                // Handle reordering in workspace
+                if (touchDragState.isReordering) {
+                    const afterElement = getDragAfterElement(workspace, touch.clientX, touch.clientY);
+                    if (afterElement == null) {
+                        workspace.appendChild(touchDragState.element);
+                    } else {
+                        workspace.insertBefore(touchDragState.element, afterElement);
+                    }
+                } else {
+                    // Show insertion marker for new items
+                    if (!insertionMarker) {
+                        insertionMarker = document.createElement('div');
+                        insertionMarker.className = 'insertion-marker';
+                    }
+
+                    const afterElement = getDragAfterElement(workspace, touch.clientX, touch.clientY);
+                    if (afterElement == null) {
+                        workspace.appendChild(insertionMarker);
+                    } else {
+                        workspace.insertBefore(insertionMarker, afterElement);
+                    }
+                }
+            }
+        }
+
+        function handleTouchEnd(e) {
+            if (!touchDragState.active) return;
+
+            // Remove touching class
+            if (touchDragState.element) {
+                touchDragState.element.classList.remove('touching');
+            }
+            document.body.classList.remove('touching');
+
+            workspace.classList.remove('dragover');
+
+            // If we have a ghost, this was a drag operation
+            if (touchDragState.ghost) {
+                e.preventDefault();
+
+                const touch = e.changedTouches[0];
+                const dropTarget = document.elementFromPoint(touch.clientX, touch.clientY);
+
+                // Check if dropped on workspace
+                if (workspace.contains(dropTarget) || dropTarget === workspace) {
+                    if (!touchDragState.isReordering) {
+                        // Adding new term from bank or suggestions
+                        const afterElement = getDragAfterElement(workspace, touch.clientX, touch.clientY);
+                        addToCanvas(touchDragState.term, afterElement);
+
+                        // Vibrate on success
+                        if (navigator.vibrate) {
+                            navigator.vibrate(20);
+                        }
+                    } else {
+                        // Reordering - already done in touchmove
+                        if (navigator.vibrate) {
+                            navigator.vibrate(10);
+                        }
+                    }
+                }
+
+                // Clean up insertion marker
+                if (insertionMarker) {
+                    insertionMarker.remove();
+                    insertionMarker = null;
+                }
+            }
+
+            // Clean up
+            removeTouchGhost();
+            touchDragState.active = false;
+            touchDragState.element = null;
+            touchDragState.term = null;
+            touchDragState.ghost = null;
+            touchDragState.isReordering = false;
+        }
+
+        function handleTouchCancel(e) {
+            // Clean up on cancel
+            if (touchDragState.element) {
+                touchDragState.element.classList.remove('touching');
+            }
+            document.body.classList.remove('touching');
+            workspace.classList.remove('dragover');
+            removeTouchGhost();
+            if (insertionMarker) {
+                insertionMarker.remove();
+                insertionMarker = null;
+            }
+            touchDragState.active = false;
+            touchDragState.element = null;
+            touchDragState.term = null;
+            touchDragState.ghost = null;
+            touchDragState.isReordering = false;
+        }
+
+        // Add global touch event listeners
+        if (isTouchDevice) {
+            document.addEventListener('touchmove', handleTouchMove, { passive: false });
+            document.addEventListener('touchend', handleTouchEnd, { passive: false });
+            document.addEventListener('touchcancel', handleTouchCancel, { passive: false });
+        }
 
         // Canvas drag and drop
         let draggedCard = null;
@@ -1868,6 +2270,10 @@
             card.addEventListener('click', (e) => {
                 // Don't speak when clicking remove button
                 if (e.target.classList.contains('remove-btn')) return;
+                // On touch devices, only speak if not dragging
+                if (isTouchDevice && touchDragState.ghost) {
+                    return; // This was a drag, not a tap
+                }
                 speak(term);
             });
 
@@ -1902,6 +2308,13 @@
                 card.classList.remove('dragging');
                 draggedCard = null;
             });
+
+            // Add touch event handlers for drag on touch devices
+            if (isTouchDevice) {
+                card.addEventListener('touchstart', (e) => {
+                    handleTouchStart(e, card, term, 'canvas');
+                }, { passive: true });
+            }
 
             // Insert at position or append
             if (beforeElement) {
@@ -1990,6 +2403,10 @@
 
                 // Click to add to workspace
                 item.addEventListener('click', () => {
+                    // On touch devices, only add on tap if not dragging
+                    if (isTouchDevice && touchDragState.ghost) {
+                        return; // This was a drag, not a tap
+                    }
                     addToCanvas(word);
                     // Update suggestions after adding
                     debouncedFetchSuggestions();
@@ -2005,6 +2422,13 @@
                 item.addEventListener('dragend', (e) => {
                     item.style.opacity = '1';
                 });
+
+                // Add touch event handlers for drag on touch devices
+                if (isTouchDevice) {
+                    item.addEventListener('touchstart', (e) => {
+                        handleTouchStart(e, item, word, 'suggestion');
+                    }, { passive: true });
+                }
 
                 suggestionsList.appendChild(item);
             });

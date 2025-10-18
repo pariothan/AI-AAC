@@ -1,0 +1,554 @@
+{
+  "meta": {
+    "project": "AI-AAC Vocabulary Generator",
+    "date": "2025-10-18",
+    "prepared_by": "Samuel Lederer, Elizabeth Weber, Meeta Pandit"
+  },
+  "product_overview": "AI-AAC is a Flask-based web application designed to assist Augmentative and Alternative Communication (AAC) users by generating contextual vocabulary word lists and example sentences using advanced AI models like OpenAI's GPT-4. The app supports text and image inputs for vocabulary generation, offers a user-friendly Infinite Craft-style UI, and emphasizes security with client-side API key management and rate limiting.",
+  "core_goals": [
+    "Provide AAC users with relevant, context-aware vocabulary to aid communication.",
+    "Enable vocabulary generation from both textual contexts and images, broadening accessibility.",
+    "Support users in constructing meaningful sentences from generated vocabulary terms.",
+    "Ensure user privacy and security by not storing API keys server-side and enforcing rate limits.",
+    "Deliver an intuitive, engaging, and visually appealing UI to facilitate AAC usage."
+  ],
+  "key_features": [
+    "Main web interface serving a rich HTML UI inspired by Infinite Craft style with draggable vocabulary cards and animated backgrounds.",
+    "Vocabulary generation API allowing users to input a context phrase or image to receive approximately 100 related vocabulary terms with emoji prefixes.",
+    "Sentence generation API to create 15 to 20 simple example sentences from user-selected words.",
+    "Next word suggestion API to assist phrase building by recommending likely subsequent words, including core vocabulary fallback.",
+    "Image analysis feature that processes user-uploaded images, resizes and converts them, then generates descriptive text for vocabulary extraction.",
+    "Security features including HTTPS warnings, browser session-only API key storage option, per-API-key rate limiting (20 requests per 5 minutes), and no server-side key storage or logging.",
+    "Support for users providing their own OpenAI API keys to protect privacy and control usage.",
+    "Ability to export generated vocabulary lists as text files and clear/reset word banks easily."
+  ],
+  "user_flow_summary": [
+    "User visits the main page and is prompted to enter their OpenAI API key, with the option to store it only for the session for enhanced security.",
+    "User inputs a text context or uploads an image to generate relevant vocabulary terms via AI processing.",
+    "Generated terms are displayed as draggable cards that users can organize and filter using a search box.",
+    "User selects words from the word bank and assembles them in a workspace to build AAC phrases.",
+    "User triggers the sentence generation function to get simple example sentences from their selected vocabulary.",
+    "The user may use next word suggestions to continue building phrases or generate new vocabulary from a different context or image.",
+    "Throughout the experience, security warnings and rate limits are enforced, with clear error messaging on limits and issues."
+  ],
+  "validation_criteria": [
+    "The main web interface loads correctly and is responsive on desktop browsers.",
+    "API endpoints (/generate, /generate-sentences, /suggest-next-words, /analyze-image) respond with expected data formats and error codes.",
+    "Rate limiting enforces a maximum of 20 requests per 5 minutes per API key, returning appropriate error messages on limit exceedance.",
+    "API key is never stored server-side and can be set to persist only for the browser session.",
+    "Image upload and processing properly resize and convert images, producing meaningful descriptive texts.",
+    "Vocabulary generation yields contextually appropriate terms with emoji prefixes, matching the input context or derived from image descriptions.",
+    "Sentence generation produces 15-20 short, simple sentences maintaining word meaning.",
+    "Next word suggestions offer relevant likely continuations based on current phrase context or core vocabulary for empty inputs.",
+    "Security warnings display prominently when accessed over HTTP (non-localhost) and alert users about risks.",
+    "Export functionality successfully produces downloadable text files of the current vocabulary list.",
+    "User experience is smooth with clear UI feedback for actions, errors, and security notices throughout."
+  ],
+  "code_summary": {
+    "tech_stack": [
+      "Python 3.x",
+      "Flask",
+      "OpenAI API (GPT-4o-mini, text-embedding-3-small)",
+      "spaCy (en_core_web_sm)",
+      "scikit-learn",
+      "Pillow (image processing)",
+      "NumPy",
+      "Flask-CORS",
+      "In-memory rate limiting (no database)"
+    ],
+    "features": [
+      {
+        "name": "Main Web Interface",
+        "description": "Serves the main HTML interface for the AAC vocabulary application",
+        "files": [
+          "app.py",
+          "templates/index.html"
+        ],
+        "api_doc": {
+          "openapi": "3.0.0",
+          "info": {
+            "title": "Main Web Interface",
+            "version": "1.0.0"
+          },
+          "paths": {
+            "/": {
+              "get": {
+                "summary": "Get main web interface",
+                "description": "Returns the HTML page for the AAC vocabulary generator",
+                "responses": {
+                  "200": {
+                    "description": "HTML page rendered successfully",
+                    "content": {
+                      "text/html": {
+                        "schema": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "Check Server API Key",
+        "description": "Check if the server has an OpenAI API key configured in environment variables",
+        "files": [
+          "app.py"
+        ],
+        "api_doc": {
+          "openapi": "3.0.0",
+          "info": {
+            "title": "Check Server API Key",
+            "version": "1.0.0"
+          },
+          "paths": {
+            "/api/check-server-key": {
+              "get": {
+                "summary": "Check if server has API key",
+                "description": "Returns whether the server has an OpenAI API key configured",
+                "responses": {
+                  "200": {
+                    "description": "Server key status returned",
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "type": "object",
+                          "properties": {
+                            "hasServerKey": {
+                              "type": "boolean",
+                              "description": "True if server has OPENAI_API_KEY configured"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "Generate Vocabulary",
+        "description": "Generates contextual vocabulary words for AAC users based on a text context using NLP and embeddings",
+        "files": [
+          "app.py",
+          "src/rank_terms.py"
+        ],
+        "api_doc": {
+          "openapi": "3.0.0",
+          "info": {
+            "title": "Generate Vocabulary API",
+            "version": "1.0.0"
+          },
+          "paths": {
+            "/generate": {
+              "post": {
+                "summary": "Generate vocabulary from context",
+                "description": "Generates ~100 relevant vocabulary words based on the provided context using GPT-4o-mini, embeddings, and semantic ranking",
+                "requestBody": {
+                  "required": true,
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "type": "object",
+                        "required": [
+                          "context"
+                        ],
+                        "properties": {
+                          "context": {
+                            "type": "string",
+                            "description": "The context sentence or phrase (e.g., 'going to the beach')",
+                            "example": "going to the beach"
+                          },
+                          "api_key": {
+                            "type": "string",
+                            "description": "User's OpenAI API key (optional if server has key configured)",
+                            "example": "sk-..."
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "responses": {
+                  "200": {
+                    "description": "Vocabulary generated successfully",
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "type": "object",
+                          "properties": {
+                            "success": {
+                              "type": "boolean",
+                              "example": true
+                            },
+                            "terms": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "description": "Term with emoji prefix",
+                                "example": "🏖️ beach"
+                              }
+                            },
+                            "context": {
+                              "type": "string",
+                              "example": "going to the beach"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "400": {
+                    "description": "Missing context or API key",
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "type": "object",
+                          "properties": {
+                            "error": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "429": {
+                    "description": "Rate limit exceeded",
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "type": "object",
+                          "properties": {
+                            "error": {
+                              "type": "string",
+                              "example": "Rate limit exceeded. Please wait 180 seconds."
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "500": {
+                    "description": "Server error during generation",
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "type": "object",
+                          "properties": {
+                            "success": {
+                              "type": "boolean",
+                              "example": false
+                            },
+                            "error": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "Generate Sentences",
+        "description": "Generates example sentences using selected vocabulary words",
+        "files": [
+          "app.py"
+        ],
+        "api_doc": {
+          "openapi": "3.0.0",
+          "info": {
+            "title": "Generate Sentences API",
+            "version": "1.0.0"
+          },
+          "paths": {
+            "/generate-sentences": {
+              "post": {
+                "summary": "Generate sentences from words",
+                "description": "Creates 15-20 short, simple sentences using the provided words while maintaining their core meaning",
+                "requestBody": {
+                  "required": true,
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "type": "object",
+                        "required": [
+                          "words"
+                        ],
+                        "properties": {
+                          "words": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "Array of words to use in sentences",
+                            "example": [
+                              "I",
+                              "want",
+                              "food"
+                            ]
+                          },
+                          "api_key": {
+                            "type": "string",
+                            "description": "User's OpenAI API key (optional if server has key configured)"
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "responses": {
+                  "200": {
+                    "description": "Sentences generated successfully",
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "type": "object",
+                          "properties": {
+                            "success": {
+                              "type": "boolean",
+                              "example": true
+                            },
+                            "sentences": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              },
+                              "example": [
+                                "I want food.",
+                                "I really want food.",
+                                "I need food."
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "400": {
+                    "description": "Missing words or API key",
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "type": "object",
+                          "properties": {
+                            "error": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "429": {
+                    "description": "Rate limit exceeded"
+                  },
+                  "500": {
+                    "description": "Server error"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "Suggest Next Words",
+        "description": "Suggests likely next words to continue an AAC phrase based on context",
+        "files": [
+          "app.py"
+        ],
+        "api_doc": {
+          "openapi": "3.0.0",
+          "info": {
+            "title": "Suggest Next Words API",
+            "version": "1.0.0"
+          },
+          "paths": {
+            "/suggest-next-words": {
+              "post": {
+                "summary": "Suggest next words for AAC communication",
+                "description": "Provides 15 likely next words based on the current word sequence, or core vocabulary if no words provided",
+                "requestBody": {
+                  "required": true,
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "words": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "Current sequence of words (empty array for core vocabulary)",
+                            "example": [
+                              "I",
+                              "want"
+                            ]
+                          },
+                          "api_key": {
+                            "type": "string",
+                            "description": "User's OpenAI API key (optional if server has key configured)"
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "responses": {
+                  "200": {
+                    "description": "Suggestions generated successfully",
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "type": "object",
+                          "properties": {
+                            "success": {
+                              "type": "boolean",
+                              "example": true
+                            },
+                            "suggestions": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "description": "Suggested word with emoji",
+                                "example": "💧 water"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "400": {
+                    "description": "Missing API key"
+                  },
+                  "429": {
+                    "description": "Rate limit exceeded"
+                  },
+                  "500": {
+                    "description": "Server error"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "Analyze Image",
+        "description": "Analyzes an uploaded image using GPT-4o-mini vision to generate a description suitable for vocabulary generation",
+        "files": [
+          "app.py"
+        ],
+        "api_doc": {
+          "openapi": "3.0.0",
+          "info": {
+            "title": "Analyze Image API",
+            "version": "1.0.0"
+          },
+          "paths": {
+            "/analyze-image": {
+              "post": {
+                "summary": "Analyze image and generate description",
+                "description": "Uploads an image, processes it (resize, convert to JPEG), and generates a 2-3 sentence description using OpenAI's vision API",
+                "requestBody": {
+                  "required": true,
+                  "content": {
+                    "multipart/form-data": {
+                      "schema": {
+                        "type": "object",
+                        "required": [
+                          "image"
+                        ],
+                        "properties": {
+                          "image": {
+                            "type": "string",
+                            "format": "binary",
+                            "description": "Image file to analyze (JPEG, PNG, etc.)"
+                          },
+                          "api_key": {
+                            "type": "string",
+                            "description": "User's OpenAI API key (optional if server has key configured)"
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "responses": {
+                  "200": {
+                    "description": "Image analyzed successfully",
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "type": "object",
+                          "properties": {
+                            "success": {
+                              "type": "boolean",
+                              "example": true
+                            },
+                            "description": {
+                              "type": "string",
+                              "example": "A family is enjoying a sunny day at the beach. Children are building sandcastles near the water while adults relax under umbrellas."
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "400": {
+                    "description": "Missing image file, empty filename, missing API key, or rate limit exceeded",
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "type": "object",
+                          "properties": {
+                            "error": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "500": {
+                    "description": "Server error during image processing or analysis",
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "type": "object",
+                          "properties": {
+                            "success": {
+                              "type": "boolean",
+                              "example": false
+                            },
+                            "error": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    ]
+  }
+}
